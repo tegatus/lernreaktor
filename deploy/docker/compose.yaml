@@ -34,7 +34,7 @@ services:
       POSTGRES_USER: lernreaktor
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - lernreaktor_db_data:/var/lib/postgresql/data
+      - lernreaktor_db_data:/var/lib/postgresql
     networks:
       - internal
     healthcheck:
