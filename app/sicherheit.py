@@ -1,8 +1,8 @@
 """Sicherheitsfunktionen: Login-Sperre, Sicherheits-Header, Sitzungs-Timeout, erzwungener Passwortwechsel, CSRF.
 
 Konfiguration (Umgebungsvariablen):
-  LERNLABOR_HTTPS=1     Betrieb über HTTPS: Cookies nur über HTTPS (Secure) und HSTS-Header
-  LERNLABOR_PROXY=1     hinter einem Reverse-Proxy (nginx/Caddy): X-Forwarded-* auswerten
+  LERNREAKTOR_HTTPS=1     Betrieb über HTTPS: Cookies nur über HTTPS (Secure) und HSTS-Header
+  LERNREAKTOR_PROXY=1     hinter einem Reverse-Proxy (nginx/Caddy): X-Forwarded-* auswerten
   INAKTIV_MINUTEN       automatische Abmeldung nach Inaktivität (Standard 60)
 """
 import hmac
@@ -76,7 +76,7 @@ def sitzung_neu_beginnen():
 # ---------------------------------------------------------------- Registrierung in der App
 
 def einrichten(app):
-    https = os.environ.get("LERNLABOR_HTTPS") == "1" or app.config.get("LERNLABOR_HTTPS")
+    https = os.environ.get("LERNREAKTOR_HTTPS") == "1" or app.config.get("LERNREAKTOR_HTTPS")
     app.config.setdefault("INAKTIV_MINUTEN", int(os.environ.get("INAKTIV_MINUTEN", 60)))
     app.config.update(
         SESSION_COOKIE_SECURE=bool(https),
@@ -84,12 +84,12 @@ def einrichten(app):
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),   # absolute Höchstdauer einer Sitzung
     )
-    if os.environ.get("LERNLABOR_PROXY") == "1":
+    if os.environ.get("LERNREAKTOR_PROXY") == "1":
         from werkzeug.middleware.proxy_fix import ProxyFix
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     if not https and not app.debug and not app.testing:
-        app.logger.warning("LERNLABOR_HTTPS ist nicht gesetzt: Cookies werden auch über HTTP gesendet. "
-                           "Im Betrieb immer HTTPS verwenden und LERNLABOR_HTTPS=1 setzen.")
+        app.logger.warning("LERNREAKTOR_HTTPS ist nicht gesetzt: Cookies werden auch über HTTP gesendet. "
+                           "Im Betrieb immer HTTPS verwenden und LERNREAKTOR_HTTPS=1 setzen.")
 
     @app.before_request
     def _vor_jeder_anfrage():

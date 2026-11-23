@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# LernLabor – Installation auf Ubuntu (getestet für 24.04/26.04) mit PostgreSQL, Gunicorn und nginx.
+# LernReaktor – Installation auf Ubuntu (getestet für 24.04/26.04) mit PostgreSQL, Gunicorn und nginx.
 #
 # Aufruf (als Benutzer mit sudo-Rechten), aus dem geklonten Repository:
-#   sudo git clone https://github.com/tegatus/lernlabor.git /opt/lernlabor
-#   sudo /opt/lernlabor/deploy/install.sh [--ip 203.0.113.10] [--firewall]
+#   sudo git clone https://github.com/tegatus/lernreaktor.git /opt/lernreaktor
+#   sudo /opt/lernreaktor/deploy/install.sh [--ip 203.0.113.10] [--firewall]
 #
 # Das Skript kann gefahrlos mehrfach ausgeführt werden; bestehende Daten und Schlüssel bleiben erhalten.
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DATEN=/var/lib/lernlabor
-KONFIG=/etc/lernlabor
-ENV_DATEI=$KONFIG/lernlabor.env
-DIENSTKONTO=lernlabor
-DB_NAME=lernlabor
+DATEN=/var/lib/lernreaktor
+KONFIG=/etc/lernreaktor
+ENV_DATEI=$KONFIG/lernreaktor.env
+DIENSTKONTO=lernreaktor
+DB_NAME=lernreaktor
 SERVER_IP=""
 FIREWALL=0
 
@@ -46,7 +46,7 @@ if ! id "$DIENSTKONTO" &>/dev/null; then
 fi
 install -d -o "$DIENSTKONTO" -g "$DIENSTKONTO" -m 750 "$DATEN" "$DATEN/dateien" "$DATEN/instance"
 install -d -o root -g "$DIENSTKONTO" -m 750 "$KONFIG"
-install -d -o root -g root -m 700 /var/backups/lernlabor
+install -d -o root -g root -m 700 /var/backups/lernreaktor
 
 schritt "PostgreSQL: Datenbank und Rolle (Anmeldung über lokalen Socket, kein Passwort nötig)"
 dienst enable --now postgresql
@@ -61,13 +61,13 @@ schritt "Konfiguration $ENV_DATEI"
 if [[ ! -f $ENV_DATEI ]]; then
   umask 027
   cat > "$ENV_DATEI" <<EOF
-# LernLabor – Konfiguration (nur root und Dienstkonto lesbar). Nach Änderungen: sudo systemctl restart lernlabor
+# LernReaktor – Konfiguration (nur root und Dienstkonto lesbar). Nach Änderungen: sudo systemctl restart lernreaktor
 SECRET_KEY=$(openssl rand -hex 32)
 DATABASE_URL=postgresql+psycopg:///$DB_NAME?host=/var/run/postgresql
 UPLOAD_DIR=$DATEN/dateien
-LERNLABOR_INSTANCE=$DATEN/instance
-LERNLABOR_HTTPS=1
-LERNLABOR_PROXY=1
+LERNREAKTOR_INSTANCE=$DATEN/instance
+LERNREAKTOR_HTTPS=1
+LERNREAKTOR_PROXY=1
 INAKTIV_MINUTEN=60
 # KI-Assistent (optional): Schlüssel aus der Claude Console eintragen und Dienst neu starten
 #ANTHROPIC_API_KEY=
@@ -85,42 +85,42 @@ schritt "Python-Umgebung und Abhängigkeiten"
 "$APP_DIR/.venv/bin/pip" install -q -r "$APP_DIR/deploy/requirements-server.txt"
 
 schritt "Verwaltungsbefehle"
-install -m 755 "$APP_DIR/deploy/lernlabor-flask" /usr/local/bin/lernlabor-flask
-sed -i "s#__APP_DIR__#$APP_DIR#g" /usr/local/bin/lernlabor-flask
-install -m 700 "$APP_DIR/deploy/backup.sh" /usr/local/sbin/lernlabor-backup
+install -m 755 "$APP_DIR/deploy/lernreaktor-flask" /usr/local/bin/lernreaktor-flask
+sed -i "s#__APP_DIR__#$APP_DIR#g" /usr/local/bin/lernreaktor-flask
+install -m 700 "$APP_DIR/deploy/backup.sh" /usr/local/sbin/lernreaktor-backup
 
 schritt "Datenbank einrichten (Tabellen, BiVo-Kompetenzen, Lernziele, Beispielaufgaben)"
-lernlabor-flask init-db
+lernreaktor-flask init-db
 
 schritt "systemd-Dienste"
-sed "s#__APP_DIR__#$APP_DIR#g" "$APP_DIR/deploy/lernlabor.service" > /etc/systemd/system/lernlabor.service
-cp "$APP_DIR/deploy/lernlabor-backup.service" "$APP_DIR/deploy/lernlabor-backup.timer" /etc/systemd/system/
+sed "s#__APP_DIR__#$APP_DIR#g" "$APP_DIR/deploy/lernreaktor.service" > /etc/systemd/system/lernreaktor.service
+cp "$APP_DIR/deploy/lernreaktor-backup.service" "$APP_DIR/deploy/lernreaktor-backup.timer" /etc/systemd/system/
 dienst daemon-reload
-dienst enable --now lernlabor.service lernlabor-backup.timer
-dienst restart lernlabor.service
+dienst enable --now lernreaktor.service lernreaktor-backup.timer
+dienst restart lernreaktor.service
 
 schritt "nginx und HTTPS"
-SITE=/etc/nginx/sites-available/lernlabor
+SITE=/etc/nginx/sites-available/lernreaktor
 if [[ -f $SITE ]] && grep -q letsencrypt "$SITE"; then
   echo "   Let's-Encrypt-Konfiguration vorhanden – unverändert gelassen"
 else
   [[ -n $SERVER_IP ]] || SERVER_IP="$(hostname -I | awk '{print $1}')"
-  ZERT=/etc/ssl/lernlabor
+  ZERT=/etc/ssl/lernreaktor
   install -d -m 755 "$ZERT"
-  if [[ ! -f $ZERT/lernlabor.crt ]]; then
+  if [[ ! -f $ZERT/lernreaktor.crt ]]; then
     echo "   selbstsigniertes Zertifikat für $SERVER_IP (bis eine Domain eingerichtet ist)"
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 825 \
-      -keyout "$ZERT/lernlabor.key" -out "$ZERT/lernlabor.crt" \
-      -subj "/CN=$SERVER_IP/O=LernLabor" -addext "subjectAltName=IP:$SERVER_IP" 2>/dev/null
-    chmod 600 "$ZERT/lernlabor.key"
+      -keyout "$ZERT/lernreaktor.key" -out "$ZERT/lernreaktor.crt" \
+      -subj "/CN=$SERVER_IP/O=LernReaktor" -addext "subjectAltName=IP:$SERVER_IP" 2>/dev/null
+    chmod 600 "$ZERT/lernreaktor.key"
   fi
   sed -e "s#__SERVER_NAME__#$SERVER_IP#g" -e "s#__APP_DIR__#$APP_DIR#g" \
-      -e "s#__CERT__#$ZERT/lernlabor.crt#" -e "s#__KEY__#$ZERT/lernlabor.key#" \
-      "$APP_DIR/deploy/nginx-lernlabor.conf" > "$SITE"
+      -e "s#__CERT__#$ZERT/lernreaktor.crt#" -e "s#__KEY__#$ZERT/lernreaktor.key#" \
+      "$APP_DIR/deploy/nginx-lernreaktor.conf" > "$SITE"
   # ohne IPv6 im Kernel (z. B. deaktiviert) kann nginx nicht auf [::] lauschen
   [[ -f /proc/net/if_inet6 ]] || sed -i '/listen \[::\]/d' "$SITE"
 fi
-ln -sf "$SITE" /etc/nginx/sites-enabled/lernlabor
+ln -sf "$SITE" /etc/nginx/sites-enabled/lernreaktor
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 dienst enable nginx
@@ -136,15 +136,15 @@ fi
 
 schritt "Fertig"
 cat <<EOF
-LernLabor läuft unter:  https://${SERVER_IP:-<Server-IP>}
+LernReaktor läuft unter:  https://${SERVER_IP:-<Server-IP>}
   (selbstsigniertes Zertifikat: der Browser warnt einmal – bis eine Domain eingerichtet ist)
 
 Nächste Schritte:
   1. Lehrpersonen-Konto anlegen (Passwort wird verdeckt abgefragt):
-       sudo lernlabor-flask create-lp vorname.name "Vorname Name"
-  2. Später mit Domain:  sudo $APP_DIR/deploy/domain.sh lernlabor.example.ch admin@example.ch
+       sudo lernreaktor-flask create-lp vorname.name "Vorname Name"
+  2. Später mit Domain:  sudo $APP_DIR/deploy/domain.sh lernreaktor.example.ch admin@example.ch
   3. Aktualisieren:      sudo $APP_DIR/deploy/update.sh
 
-Status/Protokoll:  systemctl status lernlabor   ·   journalctl -u lernlabor -f
-Sicherungen:       /var/backups/lernlabor (täglich 02:30, 14 Tage) – bitte zusätzlich extern kopieren!
+Status/Protokoll:  systemctl status lernreaktor   ·   journalctl -u lernreaktor -f
+Sicherungen:       /var/backups/lernreaktor (täglich 02:30, 14 Tage) – bitte zusätzlich extern kopieren!
 EOF

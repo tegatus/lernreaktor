@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Führt Verwaltungsbefehle der App als Dienstkonto mit der Server-Konfiguration aus, z. B.:
+#   sudo lernreaktor-flask create-lp vorname.name "Vorname Name"
+#   sudo lernreaktor-flask init-db
+set -euo pipefail
+[[ $EUID -eq 0 ]] || { echo "Bitte mit sudo ausführen." >&2; exit 1; }
+cd __APP_DIR__
+# Konfiguration als Dienstkonto einlesen (die Datei ist für die Gruppe lernreaktor lesbar)
+exec runuser -u lernreaktor -- bash -c 'set -a; . /etc/lernreaktor/lernreaktor.env; set +a; exec .venv/bin/flask --app run "$@"' \
+  lernreaktor-flask "$@"

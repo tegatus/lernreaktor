@@ -1,4 +1,4 @@
-# LernLabor – Übungsplattform für Laborant/innen EFZ Biologie
+# LernReaktor – Übungsplattform für Laborant/innen EFZ Biologie
 
 Web-App für die Berufsfachschule: Lernende stellen sich aus einer Aufgabendatenbank Übungsblätter
 zusammen, drucken sie aus, lösen sie von Hand, laden Fotos hoch und erhalten von der Lehrperson eine
@@ -81,7 +81,7 @@ Tests: `.venv/bin/python -m pytest`
 | `app/static/editor.js`, `aufgabentypen.js`, `ki.js` | Aufgaben-Editor: Werkzeugleiste, Bilder, Live-Vorschau, Typen, KI |
 | `app/seed_data/` | Ausgangsdaten (Excel, Lernziele, Beispielaufgaben) |
 
-Daten liegen in `instance/` (SQLite-Datenbank `lernlabor.sqlite`, Uploads in `instance/dateien/`).
+Daten liegen in `instance/` (SQLite-Datenbank `lernreaktor.sqlite`, Uploads in `instance/dateien/`).
 Für ein Backup genügt es, diesen Ordner zu sichern.
 
 ## Sicherheit
@@ -107,8 +107,8 @@ Updates, tägliche Sicherungen und Wiederherstellung.
 - Produktiv mit einem WSGI-Server hinter HTTPS betreiben, z. B. `pip install gunicorn` und
   `gunicorn -w 3 --timeout 180 -b 127.0.0.1:8000 run:app` hinter nginx/Caddy. Nie den Flask-Entwicklungsserver öffnen.
 - `SECRET_KEY` als Umgebungsvariable setzen (sonst wird einer in `instance/secret_key` erzeugt).
-- **Immer über HTTPS** betreiben und `LERNLABOR_HTTPS=1` setzen (Cookies nur über HTTPS, HSTS). Hinter nginx/Caddy
-  zusätzlich `LERNLABOR_PROXY=1`, damit IP-Adressen (Login-Sperre) und Protokoll richtig erkannt werden.
+- **Immer über HTTPS** betreiben und `LERNREAKTOR_HTTPS=1` setzen (Cookies nur über HTTPS, HSTS). Hinter nginx/Caddy
+  zusätzlich `LERNREAKTOR_PROXY=1`, damit IP-Adressen (Login-Sperre) und Protokoll richtig erkannt werden.
 - Für mehrere Lehrpersonen gleichzeitig: `DATABASE_URL` auf PostgreSQL zeigen lassen (SQLAlchemy, keine Codeänderung nötig).
 - Datenschutz (revDSG): Es werden Namen, Leistungen und Fotos von Handschrift gespeichert. Hosting in der Schweiz
   bzw. auf schuleigener Infrastruktur, Zugriff nur für zuständige Lehrpersonen (ist so umgesetzt: eine LP sieht nur

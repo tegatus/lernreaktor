@@ -1,14 +1,14 @@
 [Unit]
-Description=LernLabor (Gunicorn)
+Description=LernReaktor (Gunicorn)
 After=network.target postgresql.service
 Wants=postgresql.service
 
 [Service]
 Type=simple
-User=lernlabor
-Group=lernlabor
+User=lernreaktor
+Group=lernreaktor
 WorkingDirectory=__APP_DIR__
-EnvironmentFile=/etc/lernlabor/lernlabor.env
+EnvironmentFile=/etc/lernreaktor/lernreaktor.env
 Environment=PYTHONDONTWRITEBYTECODE=1
 ExecStart=__APP_DIR__/.venv/bin/gunicorn -c __APP_DIR__/deploy/gunicorn.conf.py run:app
 Restart=on-failure
@@ -17,7 +17,7 @@ RestartSec=5
 # Härtung: der Dienst darf nur in seinen Datenordner schreiben
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/lernlabor
+ReadWritePaths=/var/lib/lernreaktor
 ProtectHome=true
 PrivateTmp=true
 PrivateDevices=true

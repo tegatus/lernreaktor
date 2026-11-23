@@ -1,7 +1,0 @@
-[Unit]
-Description=LernLabor: tägliche Sicherung (Datenbank und Dateien)
-After=postgresql.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/lernlabor-backup

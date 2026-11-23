@@ -17,13 +17,13 @@ def load_user(uid):
 
 
 def create_app(config=None):
-    # LERNLABOR_INSTANCE: Ordner für Datenbank (SQLite), Secret Key usw. – im Betrieb ausserhalb des Codes
-    app = Flask(__name__, instance_relative_config=True, instance_path=os.environ.get("LERNLABOR_INSTANCE") or None)
+    # LERNREAKTOR_INSTANCE: Ordner für Datenbank (SQLite), Secret Key usw. – im Betrieb ausserhalb des Codes
+    app = Flask(__name__, instance_relative_config=True, instance_path=os.environ.get("LERNREAKTOR_INSTANCE") or None)
     os.makedirs(app.instance_path, exist_ok=True)
     app.config.update(
         SECRET_KEY=os.environ.get("SECRET_KEY") or _persistent_secret(app.instance_path),
         SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL")
-        or "sqlite:///" + os.path.join(app.instance_path, "lernlabor.sqlite"),
+        or "sqlite:///" + os.path.join(app.instance_path, "lernreaktor.sqlite"),
         UPLOAD_DIR=os.environ.get("UPLOAD_DIR") or os.path.join(app.instance_path, "dateien"),
         MAX_CONTENT_LENGTH=60 * 1024 * 1024,
     )

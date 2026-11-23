@@ -1,5 +1,5 @@
 [Unit]
-Description=LernLabor: tägliche Sicherung um 02:30
+Description=LernReaktor: tägliche Sicherung um 02:30
 
 [Timer]
 OnCalendar=*-*-* 02:30:00

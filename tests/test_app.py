@@ -589,7 +589,7 @@ def test_keine_inline_skripte_in_vorlagen():
 
 
 def test_secure_cookie_bei_https(tmp_path, monkeypatch):
-    monkeypatch.setenv("LERNLABOR_HTTPS", "1")
+    monkeypatch.setenv("LERNREAKTOR_HTTPS", "1")
     app = create_app({"SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path}/h.sqlite", "UPLOAD_DIR": str(tmp_path / "d")})
     assert app.config["SESSION_COOKIE_SECURE"] is True
     assert "Strict-Transport-Security" in app.test_client().get("/login").headers

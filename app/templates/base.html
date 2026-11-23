@@ -22,7 +22,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{% block title %}LernLabor{% endblock %} · LernLabor</title>
+  <title>{% block title %}LernReaktor{% endblock %} · LernReaktor</title>
   {# setzt das Farbschema vor dem ersten Rendern (kein Aufblitzen) #}
   <script src="{{ url_for('static', filename='theme.js') }}"></script>
   <link rel="preload" href="{{ url_for('static', filename='fonts/web/inter-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -32,11 +32,11 @@
 {% if current_user.is_authenticated %}
 <header class="mobilleiste">
   <button type="button" class="symbolknopf" id="nav-oeffnen" aria-label="Menü öffnen">{{ icon('menu') }}</button>
-  <a class="marke" href="{{ url_for('auth.start') }}"><span class="markenzeichen">L</span> LernLabor</a>
+  <a class="marke" href="{{ url_for('auth.start') }}"><span class="markenzeichen">L</span> LernReaktor</a>
 </header>
 <nav class="navleiste" id="navleiste" aria-label="Hauptnavigation">
   <a class="marke" href="{{ url_for('auth.start') }}"><span class="markenzeichen">L</span>
-    <span>LernLabor<small>Laborant/in EFZ Biologie</small></span></a>
+    <span>LernReaktor<small>Laborant/in EFZ Biologie</small></span></a>
 
   {% set ep = request.endpoint or '' %}
   {% if current_user.ist_lp %}

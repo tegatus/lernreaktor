@@ -1,0 +1,7 @@
+[Unit]
+Description=LernReaktor: tägliche Sicherung (Datenbank und Dateien)
+After=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lernreaktor-backup

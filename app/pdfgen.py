@@ -330,7 +330,7 @@ class _Doc(SimpleDocTemplate):
 
 def _doc(buf, titel):
     return _Doc(buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN,
-                             topMargin=1.8 * cm, bottomMargin=1.7 * cm, title=titel, author="LernLabor")
+                             topMargin=1.8 * cm, bottomMargin=1.7 * cm, title=titel, author="LernReaktor")
 
 
 def _kopfblock(st, titel, felder, untertitel=None):
@@ -422,7 +422,7 @@ def _loesungs_story(st, eintraege, bild_pfad):
 
 # ---------------------------------------------------------------- Öffentliche Funktionen
 
-APP_NAME = "LernLabor · Laborant/in EFZ Biologie"
+APP_NAME = "LernReaktor · Laborant/in EFZ Biologie"
 
 
 def uebungsblatt_pdf(blatt, bild_pfad, loesung=False):
