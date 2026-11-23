@@ -1,0 +1,53 @@
+# Für Server mit bestehendem Caddy-Reverse-Proxy (externes Docker-Netzwerk "web"),
+# als Alternative zum bare-metal-Setup aus deploy/install.sh.
+#
+# Voraussetzungen auf dem Host: Netzwerk "web" existiert bereits (von Caddy) und
+# eine Datei ".env" neben dieser compose.yaml mit SECRET_KEY und POSTGRES_PASSWORD
+# (siehe .env.example). Start: docker compose up -d --build
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    container_name: lernreaktor
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://lernreaktor:${POSTGRES_PASSWORD}@db:5432/lernreaktor
+      LERNREAKTOR_HTTPS: "1"
+      LERNREAKTOR_PROXY: "1"
+    volumes:
+      - lernreaktor_data:/data
+    networks:
+      - web
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18-alpine
+    container_name: lernreaktor-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lernreaktor
+      POSTGRES_USER: lernreaktor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - lernreaktor_db_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lernreaktor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  lernreaktor_data:
+  lernreaktor_db_data:
+
+networks:
+  web:
+    external: true
+  internal:

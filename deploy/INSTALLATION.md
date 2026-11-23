@@ -2,6 +2,11 @@
 
 Für Ubuntu 26.04 LTS (auch 24.04) mit PostgreSQL, Gunicorn und nginx. Dauer: ca. 10 Minuten.
 
+**Auf einem Server mit bereits laufendem Reverse-Proxy** (z. B. Caddy in Docker, der andere Seiten über ein
+Docker-Netzwerk anspricht statt über Host-Ports): Dieses Skript braucht die Ports 80/443 selbst und passt nicht.
+Siehe stattdessen `deploy/docker/` (Container-Variante mit eigenem Postgres, die sich ins bestehende
+Docker-Netzwerk einhängt).
+
 ## Was eingerichtet wird
 
 | Teil | Wo | Bemerkung |
