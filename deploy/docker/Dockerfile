@@ -4,7 +4,8 @@
 FROM python:3.13-slim
 
 WORKDIR /app
-COPY requirements.txt deploy/requirements-server.txt deploy/
+COPY requirements.txt .
+COPY deploy/requirements-server.txt deploy/requirements-server.txt
 RUN pip install --no-cache-dir -r deploy/requirements-server.txt
 
 COPY . .
