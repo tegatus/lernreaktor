@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% from "_macros.html" import review_status %}
+{% block title %}Review-Hinweise{% endblock %}
+{% block content %}
+<h1>Review-Hinweise</h1>
+<p class="muted">Reviewer melden Probleme in Aufgaben und Theorie. Claude Code bereitet sie vor (Vorschlag oder Rückfrage);
+  übernommen wird nur, was du bestätigst. <a href="{{ url_for('lp_review.zugaenge') }}">Reviewer-Zugänge verwalten</a></p>
+<div class="aktionen">
+  <a class="btn klein {{ 'sek' if status }}" href="{{ url_for('lp_review.liste') }}">Aktuell</a>
+  {% for s, name in namen.items() %}
+    <a class="btn klein {{ 'sek' if status != s }}" href="{{ url_for('lp_review.liste', status=s) }}">{{ name }} ({{ zaehler[s] }})</a>
+  {% endfor %}
+</div>
+<table class="tab">
+  <tr><th>Status</th><th>Betrifft</th><th>Hinweis</th><th>Von</th><th>Gemeldet</th><th></th></tr>
+  {% for k in kommentare %}
+  <tr><td>{{ review_status(k) }}</td><td>{{ k.ziel_label }}<br><span class="muted">{{ REVIEW_STELLEN.get(k.stelle, k.stelle) }}</span></td>
+      <td>{{ k.text|truncate(140) }}</td><td>{{ k.autor.anzeigename }}</td><td>{{ k.erstellt_am|datum }}</td>
+      <td><a class="btn klein {{ 'sek' if k.status not in ('vorschlag', 'rueckfrage') }}" href="{{ url_for('lp_review.hinweis', kommentar_id=k.id) }}">
+        {{ {'vorschlag': 'Vorschlag prüfen', 'rueckfrage': 'Beantworten'}.get(k.status, 'Öffnen') }}</a></td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Keine Hinweise in dieser Ansicht.</td></tr>{% endfor %}
+</table>
+<p class="muted">«offen» = wartet auf den nächsten Lauf von Claude Code (Befehl <code>/reviews</code>).</p>
+{% endblock %}

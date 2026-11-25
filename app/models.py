@@ -36,7 +36,7 @@ class User(UserMixin, db.Model):
     benutzername = db.Column(db.String(80), unique=True, nullable=False)
     anzeigename = db.Column(db.String(120), nullable=False)
     passwort_hash = db.Column(db.String(255), nullable=False)
-    rolle = db.Column(db.String(20), nullable=False, default="lernende")  # "lp" | "lernende"
+    rolle = db.Column(db.String(20), nullable=False, default="lernende")  # "lp" | "lernende" | "reviewer"
     # Klasse ↔ Lehrperson verweisen gegenseitig aufeinander: benannte, nachträglich angelegte Fremdschlüssel,
     # damit PostgreSQL die Tabellen in beliebiger Reihenfolge anlegen und löschen kann
     klasse_id = db.Column(db.Integer, db.ForeignKey("klasse.id", use_alter=True, name="fk_user_klasse"))
@@ -53,6 +53,14 @@ class User(UserMixin, db.Model):
     @property
     def ist_lp(self):
         return self.rolle == "lp"
+
+    @property
+    def ist_reviewer(self):
+        return self.rolle == "reviewer"
+
+    @property
+    def ist_lernende(self):
+        return self.rolle == "lernende"
 
     @property
     def is_active(self):
@@ -265,6 +273,7 @@ class TheorieKapitel(db.Model):
                              back_populates="kapitel")
     lernziele = db.relationship("Lernziel", secondary=kapitel_lernziel)
     aufgaben = db.relationship("Aufgabe", secondary=aufgabe_kapitel, back_populates="kapitel")
+    review_kommentare = db.relationship("ReviewKommentar", back_populates="kapitel", cascade="all, delete-orphan")
 
     @property
     def label(self):
@@ -411,6 +420,58 @@ class PruefungAufgabe(db.Model):
     aufgabe = db.relationship("Aufgabe")
     position = db.Column(db.Integer, nullable=False)
     seed = db.Column(db.Integer)
+
+
+# ---------------------------------------------------------------- Review
+
+REVIEW_STELLEN = {"text": "Aufgabentext", "loesung": "Musterlösung", "bild": "Grafik", "zuordnung": "Themen/Lernziele",
+                  "punkte": "Punkte/Niveau", "sonstiges": "Sonstiges"}
+REVIEW_STATUS = {"offen": "offen", "vorschlag": "Vorschlag bereit", "rueckfrage": "Rückfrage",
+                 "erledigt": "erledigt", "abgelehnt": "abgelehnt"}
+
+
+class ReviewKommentar(db.Model):
+    """Hinweis eines Reviewers zu einer Aufgabe oder einem Theoriekapitel.
+
+    Ablauf: offen → (Claude Code über die Agent-Schnittstelle) vorschlag | rueckfrage → erledigt | abgelehnt.
+    Eine beantwortete Rückfrage setzt den Status wieder auf offen. Änderungen übernimmt nur die Lehrperson.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    autor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    autor = db.relationship("User")
+    aufgabe_id = db.Column(db.Integer, db.ForeignKey("aufgabe.id"))
+    aufgabe = db.relationship("Aufgabe", backref=db.backref("review_kommentare", order_by="ReviewKommentar.id"))
+    kapitel_id = db.Column(db.Integer, db.ForeignKey("theorie_kapitel.id"))
+    kapitel = db.relationship("TheorieKapitel", back_populates="review_kommentare")
+    stelle = db.Column(db.String(20), default="sonstiges")
+    zitat = db.Column(db.Text, default="")
+    text = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default="offen", nullable=False, index=True)
+    zusammenfassung = db.Column(db.Text, default="")   # Einschätzung von Claude
+    vorschlag = db.Column(db.Text)                     # JSON: geänderte Felder ({} = keine Änderung nötig)
+    verlauf = db.Column(db.Text, default="[]")         # JSON: [{wer, art, text, zeit}]
+    erstellt_am = db.Column(db.DateTime, default=now)
+    geaendert_am = db.Column(db.DateTime, default=now, onupdate=now)
+
+    @property
+    def ziel_label(self):
+        if self.aufgabe:
+            return f"Aufgabe #{self.aufgabe.id}: {self.aufgabe.titel}"
+        if self.kapitel:
+            return f"Theorie {self.kapitel.label}"
+        return "(gelöscht)"
+
+    @property
+    def eintraege(self):
+        return json.loads(self.verlauf or "[]")
+
+    def eintrag(self, wer, art, text):
+        self.verlauf = json.dumps(self.eintraege + [{"wer": wer, "art": art, "text": text,
+                                                     "zeit": now().strftime("%d.%m.%Y %H:%M")}], ensure_ascii=False)
+
+    @property
+    def vorschlag_dict(self):
+        return json.loads(self.vorschlag) if self.vorschlag else None
 
 
 class LoginVersuch(db.Model):

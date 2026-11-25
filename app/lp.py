@@ -52,7 +52,8 @@ def dashboard():
               .order_by(Uebungsblatt.erstellt_am.desc()).limit(10).all()) if ids else []
     stats = {"aufgaben": Aufgabe.query.filter_by(aktiv=True).count(), "themen": Thema.query.count(),
              "lernziele": Lernziel.query.count(), "pruefungen": Pruefung.query.filter_by(lp_id=current_user.id).count()}
-    return render_template("lp/dashboard.html", offen=offen, letzte=letzte, stats=stats)
+    from .lp_review import offene_aufgaben
+    return render_template("lp/dashboard.html", offen=offen, letzte=letzte, stats=stats, review=offene_aufgaben())
 
 
 # ---------------------------------------------------------------- Klassen & Lernende

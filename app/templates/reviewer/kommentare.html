@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% from "_macros.html" import review_verlauf %}
+{% block title %}Meine Hinweise{% endblock %}
+{% block content %}
+<h1>Meine Hinweise</h1>
+{% for k in kommentare %}
+  <h3 style="margin-bottom:.3rem">
+    {% if k.aufgabe %}<a href="{{ url_for('reviewer.aufgabe', aufgabe_id=k.aufgabe_id) }}#kommentare">{{ k.ziel_label }}</a>
+    {% elif k.kapitel %}<a href="{{ url_for('reviewer.kapitel', kapitel_id=k.kapitel_id) }}#kommentare">{{ k.ziel_label }}</a>{% endif %}</h3>
+  {{ review_verlauf(k) }}
+{% else %}<p class="muted">Du hast noch keine Hinweise gemeldet. <a href="{{ url_for('reviewer.dashboard') }}">Zu den Aufgaben</a></p>{% endfor %}
+{% endblock %}

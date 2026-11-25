@@ -833,3 +833,146 @@ def test_theorie_vorschau(app):
     login(lp, "lp", "lp-demo-2026")
     r = lp.post("/lp/theorie/vorschau", json={"text": "## Titel\nText [[bild:1]]"}).get_json()
     assert "<h3>Titel</h3>" in r["aufgabe"] and 'class="platzhalter"' in r["aufgabe"]
+
+
+# ---------------------------------------------------------------- Reviewer & Agent-Schnittstelle
+
+def _reviewer(app):
+    """Legt über die LP-Seite einen Reviewer an, setzt das Pflicht-Passwort und gibt (Reviewer, LP) zurück."""
+    import re as _re
+    lp = app.test_client()
+    login(lp, "lp", "lp-demo-2026")
+    seite = lp.post("/lp/review/zugaenge", data={"aktion": "neu", "name": "Rita Review"}).get_data(as_text=True)
+    benutzer, pw = _re.findall(r'<span class="pw">([^<]+)</span>', seite)[:2]
+    r = app.test_client()
+    login(r, benutzer, pw)
+    r.post("/passwort", data={"alt": pw, "neu": "review-pw-2026", "neu2": "review-pw-2026"})
+    return r, lp
+
+
+def test_reviewer_rechte(app):
+    from app.models import ReviewKommentar
+    r, lp = _reviewer(app)
+    assert r.get("/").headers["Location"].endswith("/review/")
+    with app.app_context():
+        geheim = Aufgabe.query.first()
+        geheim.verwendung, geheim.loesung = "pruefung", "Geheime Musterlösung 42"
+        lea = User.query.filter_by(benutzername="lea").one()
+        blatt = Uebungsblatt(lernende=lea, titel="Privat")
+        db.session.add(blatt)
+        db.session.commit()
+        gid, bid, lea_id, klasse_id = geheim.id, blatt.id, lea.id, lea.klasse_id
+    # liest alle Aufgaben inkl. Prüfungsaufgaben und Lösungen
+    assert f"/review/aufgabe/{gid}" in r.get("/review/").get_data(as_text=True)
+    assert "Geheime Musterlösung 42" in r.get(f"/review/aufgabe/{gid}").get_data(as_text=True)
+    # keine Daten von Lernenden, kein LP-Bereich
+    for url in ("/lp/", f"/lp/lernende/{lea_id}", f"/lp/klassen/{klasse_id}/kompetenzen", f"/lp/korrektur/{bid}",
+                f"/blatt/{bid}", f"/blatt/{bid}/aufgaben.pdf", "/lp/review/", "/lp/aufgaben"):
+        assert r.get(url).status_code == 403, url
+    assert r.get("/lernende").status_code == 302  # zurück zur eigenen Startseite
+    # Hinweis melden
+    r.post(f"/review/aufgabe/{gid}", data={"stelle": "loesung", "zitat": "42", "text": "Die Lösung ist 41."})
+    with app.app_context():
+        k = ReviewKommentar.query.one()
+        assert (k.status, k.stelle, k.aufgabe_id, k.autor.anzeigename) == ("offen", "loesung", gid, "Rita Review")
+    assert "Die Lösung ist 41." in r.get("/review/kommentare").get_data(as_text=True)
+    # Lernende können nicht kommentieren; deaktivierte Reviewer kommen nicht mehr rein
+    c = app.test_client()
+    login(c, "lea", "lernen-2026")
+    assert c.post(f"/review/aufgabe/{gid}", data={"text": "x"}).status_code == 403
+    with app.app_context():
+        rid = User.query.filter_by(rolle="reviewer").one().id
+    lp.post("/lp/review/zugaenge", data={"aktion": "aktiv", "user_id": rid})
+    assert r.get("/review/").status_code == 302
+
+
+def _api(client, methode, url, **kw):
+    kw.setdefault("headers", {"Authorization": "Bearer test-token-123"})
+    return getattr(client, methode)("/api/agent" + url, **kw)
+
+
+def test_agent_schnittstelle_vorschlag_und_uebernahme(app):
+    from app.models import AufgabeBild, ReviewKommentar
+    r, lp = _reviewer(app)
+    api = app.test_client()
+    with app.app_context():
+        a = Aufgabe.query.filter_by(typ="frei").first()
+        a.bilder.append(AufgabeBild(nr=1, datei="aufgabenbilder/test.jpg"))
+        db.session.commit()
+        aid, alt_titel, themen = a.id, a.titel, [t.name for t in a.themen]
+    r.post(f"/review/aufgabe/{aid}", data={"stelle": "loesung", "text": "Einheit fehlt in der Lösung."})
+    r.post(f"/review/aufgabe/{aid}", data={"stelle": "text", "text": "Unklar."})
+    with app.app_context():
+        k1, k2 = [k.id for k in ReviewKommentar.query.order_by(ReviewKommentar.id)]
+
+    # ohne konfigurierten Token aus, mit falschem oder ohne Token abgewiesen
+    assert _api(api, "get", "/kommentare").status_code == 404
+    app.config["AGENT_TOKEN"] = "test-token-123"
+    assert _api(api, "get", "/kommentare", headers={"Authorization": "Bearer falsch"}).status_code == 401
+    assert _api(api, "get", "/kommentare", headers={}).status_code == 401
+    liste = _api(api, "get", "/kommentare").get_json()["kommentare"]
+    assert [k["id"] for k in liste] == [k1, k2]
+    ziel = liste[0]["ziel"]
+    assert ziel["art"] == "aufgabe" and ziel["felder"]["titel"] == alt_titel and ziel["bilder"][0]["nr"] == 1
+    assert "Lea Muster" not in json.dumps(liste, ensure_ascii=False)  # keine Daten von Lernenden
+
+    # ungültige Vorschläge
+    for aend, erwartet in (({"farbe": "rot"}, "Unbekanntes Feld"), ({"themen": ["Gibt es nicht"]}, "gibt es nicht"),
+                           ({"loesung": "Siehe [[bild:7]]"}, "[[bild:7]]"), ({"punkte": 500}, "punkte"),
+                           ({"titel": alt_titel}, "ändert nichts")):
+        res = _api(api, "post", f"/kommentare/{k1}/vorschlag", json={"zusammenfassung": "x", "aenderungen": aend})
+        assert res.status_code == 422, aend
+        assert erwartet in json.dumps(res.get_json(), ensure_ascii=False), res.get_json()
+    # gültiger Vorschlag (unveränderte Felder werden weggelassen), danach gesperrt
+    neu = {"loesung": "Richtig: 12 µL (mit Einheit). [[bild:1]]", "themen": themen}
+    res = _api(api, "post", f"/kommentare/{k1}/vorschlag", json={"zusammenfassung": "Einheit ergänzt.", "aenderungen": neu})
+    assert res.status_code == 200 and res.get_json()["geaenderte_felder"] == ["loesung"]
+    assert _api(api, "post", f"/kommentare/{k1}/vorschlag",
+                json={"zusammenfassung": "x", "aenderungen": {}}).status_code == 409
+    assert _api(api, "post", f"/kommentare/{k2}/rueckfrage", json={"frage": "Was genau ist unklar?"}).status_code == 200
+
+    # Lehrperson: Aufgaben in der Übersicht, Vergleich, Übernahme (Bilder bleiben)
+    seite = lp.get("/lp/").get_data(as_text=True)
+    assert "Aufgaben für dich" in seite and "Vorschlag von Claude" in seite and "Rückfrage von Claude" in seite
+    seite = lp.get(f"/lp/review/{k1}").get_data(as_text=True)
+    assert "Richtig: 12 µL" in seite and "Einheit ergänzt." in seite
+    lp.post(f"/lp/review/{k1}", data={"aktion": "uebernehmen"})
+    with app.app_context():
+        a = db.session.get(Aufgabe, aid)
+        assert a.loesung == neu["loesung"] and a.titel == alt_titel and [b.nr for b in a.bilder] == [1]
+        assert db.session.get(ReviewKommentar, k1).status == "erledigt"
+    # Rückfrage beantworten → wieder offen, mit Antwort im Verlauf
+    lp.post(f"/lp/review/{k2}", data={"aktion": "antworten", "notiz": "Gemeint ist Teilaufgabe b)."})
+    offen = _api(api, "get", "/kommentare").get_json()["kommentare"]
+    assert [k["id"] for k in offen] == [k2]
+    assert [(e["wer"], e["art"]) for e in offen[0]["verlauf"]] == [("ki", "frage"), ("lp", "antwort")]
+    # «keine Änderung nötig» → Lehrperson schliesst ab
+    _api(api, "post", f"/kommentare/{k2}/vorschlag", json={"zusammenfassung": "Text ist korrekt.", "aenderungen": {}})
+    assert "keine Änderung nötig" in lp.get(f"/lp/review/{k2}").get_data(as_text=True)
+    lp.post(f"/lp/review/{k2}", data={"aktion": "uebernehmen"})
+    with app.app_context():
+        assert db.session.get(ReviewKommentar, k2).status == "erledigt"
+    assert "Aufgaben für dich" not in lp.get("/lp/").get_data(as_text=True)
+
+
+def test_agent_vorschlag_fuer_theoriekapitel(app):
+    from app.models import ReviewKommentar, TheorieDokument, TheorieKapitel
+    app.config["AGENT_TOKEN"] = "test-token-123"
+    r, lp = _reviewer(app)
+    with app.app_context():
+        k = TheorieKapitel(dokument=TheorieDokument(titel="Skript"), nummer="1", titel="PCR", text="Taq arbeitet bei 27 °C.")
+        db.session.add(k)
+        db.session.commit()
+        kid = k.id
+    r.post(f"/review/kapitel/{kid}", data={"stelle": "text", "text": "Temperatur falsch, 72 °C."})
+    api = app.test_client()
+    eintrag = _api(api, "get", "/kommentare").get_json()["kommentare"][0]
+    assert eintrag["ziel"]["art"] == "kapitel" and eintrag["ziel"]["felder"]["text"] == "Taq arbeitet bei 27 °C."
+    assert _api(api, "post", f"/kommentare/{eintrag['id']}/vorschlag",
+                json={"zusammenfassung": "x", "aenderungen": {"nummer": "2"}}).status_code == 422
+    _api(api, "post", f"/kommentare/{eintrag['id']}/vorschlag",
+         json={"zusammenfassung": "Temperatur korrigiert.", "aenderungen": {"text": "Taq arbeitet bei 72 °C."}})
+    lp.post(f"/lp/review/{eintrag['id']}", data={"aktion": "uebernehmen"})
+    with app.app_context():
+        assert db.session.get(TheorieKapitel, kid).text == "Taq arbeitet bei 72 °C."
+        assert db.session.get(ReviewKommentar, eintrag["id"]).status == "erledigt"

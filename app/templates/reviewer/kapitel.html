@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf, review_formular, review_verlauf %}
+{% block title %}{{ k.label }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('theorie.index') }}">Theorie</a> · {{ k.dokument.titel }}</p>
+<h1>{% if k.nummer %}<span class="code">{{ k.nummer }}</span> {% endif %}{{ k.titel }}</h1>
+<article class="card theorie-text">{{ inhalt }}</article>
+<h2 id="kommentare">Hinweise zu diesem Kapitel</h2>
+{% for x in kommentare %}{{ review_verlauf(x) }}{% else %}<p class="muted">Noch keine Hinweise.</p>{% endfor %}
+{{ review_formular(stellen) }}
+{% endblock %}

@@ -93,7 +93,7 @@ def einrichten(app):
 
     @app.before_request
     def _vor_jeder_anfrage():
-        if request.method == "POST" and not app.config.get("TESTING_NO_CSRF"):
+        if request.method == "POST" and not app.config.get("TESTING_NO_CSRF") and not request.path.startswith("/api/agent/"):
             csrf_pruefen()
         if request.endpoint == "static" or not current_user.is_authenticated:
             return None

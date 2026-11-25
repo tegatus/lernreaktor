@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf, review_verlauf %}
+{% block title %}Review-Hinweis #{{ k.id }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('lp_review.liste') }}">Review-Hinweise</a></p>
+<h1>{{ k.ziel_label }}</h1>
+<p>{% if k.aufgabe %}<a href="{{ url_for('lp.aufgabe_bearbeiten', aufgabe_id=k.aufgabe_id) }}">Aufgabe im Editor öffnen</a>
+   {% elif k.kapitel %}<a href="{{ url_for('theorie.kapitel_bearbeiten', kapitel_id=k.kapitel_id) }}">Kapitel im Editor öffnen</a>{% endif %}</p>
+
+{{ review_verlauf(k) }}
+
+{% if k.status == 'vorschlag' %}
+  <h2>Vorschlag von Claude</h2>
+  {% if diff %}
+  <table class="diff">
+    <tr><th>Feld</th><th>Bisher</th><th>Neu</th></tr>
+    {% for feld, alt, neu in diff %}<tr><th>{{ feld }}</th><td class="alt">{{ alt }}</td><td class="neu">{{ neu }}</td></tr>{% endfor %}
+  </table>
+  {% else %}<p class="flash info">Claude meint: keine Änderung nötig (Begründung oben).</p>{% endif %}
+{% elif k.status == 'rueckfrage' %}
+  <p class="flash info">Claude braucht eine Antwort von dir, bevor ein Vorschlag möglich ist (siehe Verlauf oben).</p>
+{% endif %}
+
+{% if k.status not in ('erledigt', 'abgelehnt') %}
+<form method="post" class="card" style="margin-top:1rem">{{ csrf() }}
+  <label class="feld">{{ 'Deine Antwort an Claude' if k.status == 'rueckfrage' else 'Notiz bzw. Antwort (optional; der Reviewer sieht sie)' }}
+    <textarea name="notiz" rows="3" {{ 'required' if k.status == 'rueckfrage' }}></textarea></label>
+  <div class="aktionen">
+    {% if k.status == 'vorschlag' %}
+      <button class="btn" name="aktion" value="uebernehmen">{{ 'Übernehmen' if diff else 'Abschliessen (keine Änderung)' }}</button>
+      {% if diff %}<button class="btn sek" name="aktion" value="editor">Übernehmen &amp; im Editor anpassen</button>{% endif %}
+      <button class="btn sek" name="aktion" value="antworten" title="Vorschlag verwerfen, Claude arbeitet mit deiner Notiz erneut daran">Mit Notiz zurück an Claude</button>
+    {% elif k.status == 'rueckfrage' %}
+      <button class="btn" name="aktion" value="antworten">Antwort senden</button>
+    {% endif %}
+    <button class="btn sek" name="aktion" value="erledigt">Selbst erledigt</button>
+    <button class="btn sek" name="aktion" value="ablehnen">Nicht übernehmen</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

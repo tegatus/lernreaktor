@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf %}
+{% block title %}Reviewer-Zugänge{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('lp_review.liste') }}">Review-Hinweise</a></p>
+<h1>Reviewer-Zugänge</h1>
+<p class="muted">Reviewer lesen alle Aufgaben (auch Lösungen und Prüfungsaufgaben) und die Theorie und können Hinweise melden.
+  Sie sehen keine Lernenden, Abgaben oder Korrekturen.</p>
+{% if neu %}
+<div class="card">
+  <h3 style="margin-top:0">Zugang für {{ neu[0] }} – jetzt weitergeben</h3>
+  <p>Benutzername <span class="pw">{{ neu[1] }}</span> · Passwort <span class="pw">{{ neu[2] }}</span></p>
+  <p class="muted">Das Passwort muss bei der ersten Anmeldung geändert werden.</p>
+</div>
+{% endif %}
+<table class="tab">
+  <tr><th>Name</th><th>Benutzername</th><th>Hinweise</th><th>Status</th><th></th></tr>
+  {% for u in reviewer %}
+  <tr><td>{{ u.anzeigename }}</td><td>{{ u.benutzername }}</td><td>{{ anzahl[u.id] }}</td>
+      <td>{{ 'aktiv' if u.aktiv else 'deaktiviert' }}</td>
+      <td class="aktionen" style="margin:0">
+        <form method="post" data-bestaetigen="Neues Passwort erzeugen?">{{ csrf() }}<input type="hidden" name="user_id" value="{{ u.id }}">
+          <button class="link" name="aktion" value="passwort">Passwort zurücksetzen</button></form>
+        <form method="post">{{ csrf() }}<input type="hidden" name="user_id" value="{{ u.id }}">
+          <button class="link" name="aktion" value="aktiv">{{ 'Deaktivieren' if u.aktiv else 'Aktivieren' }}</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="muted">Noch keine Reviewer.</td></tr>{% endfor %}
+</table>
+<form method="post" class="card" style="margin-top:1rem">{{ csrf() }}
+  <label class="feld">Neuer Reviewer (Name) <input name="name" required placeholder="z. B. Anna Beispiel"></label>
+  <button class="btn" name="aktion" value="neu">Zugang erstellen</button>
+</form>
+{% endblock %}

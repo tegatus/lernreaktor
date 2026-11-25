@@ -82,6 +82,22 @@ In `/etc/lernreaktor/lernreaktor.env` die Zeile `#ANTHROPIC_API_KEY=` durch `ANT
 sudo systemctl restart lernreaktor
 ```
 
+## Review-Hinweise mit Claude Code bearbeiten (optional)
+
+Reviewer melden Probleme in Aufgaben und Theorie. Claude Code holt die offenen Hinweise über die
+Agent-Schnittstelle und schreibt Vorschläge oder Rückfragen zurück; übernommen wird nur, was die Lehrperson
+bestätigt. Claude Code läuft dabei mit dem Claude-Abo, nicht über einen API-Schlüssel.
+
+1. Token erzeugen (`openssl rand -hex 32`) und in `/etc/lernreaktor/lernreaktor.env` als `AGENT_TOKEN=<Token>`
+   eintragen (Docker: in `.env`), dann `sudo systemctl restart lernreaktor`. Ohne Token ist die Schnittstelle aus.
+2. Die App muss von aussen über HTTPS erreichbar sein (Domain, siehe oben).
+3. In Claude Code im Projekt eine geplante Routine anlegen (`/schedule`): Repository `tegatus/lernreaktor`,
+   Auftrag `/reviews`, Umgebungsvariablen `LERNREAKTOR_URL=https://<domain>` und
+   `LERNREAKTOR_AGENT_TOKEN=<Token>`; die Domain in den Netzwerkeinstellungen der Umgebung erlauben.
+   Von Hand geht es jederzeit lokal: beide Variablen setzen und in Claude Code `/reviews` eingeben.
+
+Token wechseln: neuen Wert in der Konfiguration und in der Routine eintragen, Dienst neu starten.
+
 ## Sicherungen
 
 - Täglich um 02:30 (verpasste Läufe werden nachgeholt): `/var/backups/lernreaktor/datenbank_<Datum>.dump` und

@@ -109,3 +109,36 @@
   </details>
 </div>
 {% endmacro %}
+
+{# Review-Hinweise: Formular und Verlauf (Reviewer-Bereich und Aufgabenliste der Lehrperson) #}
+{% macro review_formular(stellen) %}
+<form method="post" class="card review-formular">{{ csrf() }}
+  <h3 style="margin-top:0">Hinweis melden</h3>
+  <label class="feld">Betrifft
+    <select name="stelle">{% for k, label in stellen.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select></label>
+  <label class="feld">Zitat der Stelle (optional) <input name="zitat" placeholder="z. B. «10 µL Master-Mix pro Well»"></label>
+  <label class="feld">Was stimmt nicht oder ist unklar? <textarea name="text" rows="4" required
+    placeholder="Möglichst konkret: was ist falsch, und wie wäre es richtig?"></textarea></label>
+  <button class="btn">Hinweis senden</button>
+</form>
+{% endmacro %}
+
+{% macro review_status(k) -%}
+{%- set texte = {'offen': 'offen', 'vorschlag': 'in Prüfung', 'rueckfrage': 'Rückfrage', 'erledigt': 'erledigt', 'abgelehnt': 'nicht übernommen'} -%}
+<span class="badge review-{{ k.status }}">{{ texte[k.status] }}</span>
+{%- endmacro %}
+
+{% macro review_verlauf(k) %}
+{%- set wer = {'ki': 'Claude', 'lp': 'Lehrperson', 'reviewer': 'Reviewer'} -%}
+{%- set art = {'frage': 'Rückfrage', 'antwort': 'Antwort', 'vorschlag': 'Vorschlag', 'notiz': 'Notiz'} -%}
+<div class="review-eintrag">
+  <div class="review-kopf">{{ review_status(k) }} <strong>{{ 'Text' if k.kapitel_id and k.stelle == 'text' else REVIEW_STELLEN.get(k.stelle, k.stelle) }}</strong>
+    <span class="muted">· {{ k.autor.anzeigename }} · {{ k.erstellt_am|datum(true) }}</span></div>
+  {% if k.zitat %}<blockquote>{{ k.zitat }}</blockquote>{% endif %}
+  <p style="white-space: pre-wrap; margin:.3rem 0">{{ k.text }}</p>
+  {% for e in k.eintraege %}
+    <div class="review-antwort review-{{ e.wer }}"><span class="muted">{{ wer[e.wer] }} · {{ art[e.art] }} · {{ e.zeit }}</span>
+      <div style="white-space: pre-wrap">{{ e.text }}</div></div>
+  {% endfor %}
+</div>
+{% endmacro %}

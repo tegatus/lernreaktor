@@ -9,6 +9,18 @@
   <div class="card"><div class="stat">{{ stats.pruefungen }}</div>Prüfungen erstellt</div>
 </div>
 
+{% if review %}
+<h2>Aufgaben für dich</h2>
+<table class="tab">
+  <tr><th>Was</th><th>Betrifft</th><th>Hinweis</th><th></th></tr>
+  {% for k in review %}
+  <tr><td>{{ 'Vorschlag von Claude' if k.status == 'vorschlag' else 'Rückfrage von Claude' }}</td><td>{{ k.ziel_label }}</td>
+      <td>{{ k.text|truncate(110) }}</td>
+      <td><a class="btn klein" href="{{ url_for('lp_review.hinweis', kommentar_id=k.id) }}">{{ 'Prüfen' if k.status == 'vorschlag' else 'Beantworten' }}</a></td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+
 <h2>Zu korrigieren</h2>
 {% if offen %}
 <table class="tab">

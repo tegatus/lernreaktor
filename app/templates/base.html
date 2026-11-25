@@ -14,6 +14,7 @@
   'schluessel': '<circle cx="8" cy="15" r="3.5"/><path d="m10.5 12.5 8-8M16 7l2.5 2.5M14 9l2 2"/>',
   'abmelden': '<path d="M14 4.5h4.5v15H14"/><path d="M10 8 6 12l4 4M6 12h10"/>',
   'menu': '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  'review': '<path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path d="M8.5 9.5h7M8.5 12.5h4"/>',
   'theorie': '<path d="M12 6.5C10 5 7.5 4.5 4 4.8v13.5c3.5-.3 6 .2 8 1.7 2-1.5 4.5-2 8-1.7V4.8c-3.5-.3-6 .2-8 1.7z"/><path d="M12 6.5V20"/>',
 }[name]|safe }}</svg>
 {%- endmacro %}
@@ -50,8 +51,13 @@
       ('theorie.index', 'Theorie', 'theorie', ['theorie.']),
       ('lp.kompetenzen', 'Kompetenzen BiVo', 'bivo', ['lp.kompetenzen']),
       ('lp.pruefungen', 'Prüfungen', 'pruefungen', ['lp.pruefung']),
+      ('lp_review.liste', 'Review-Hinweise', 'review', ['lp_review.']),
       ('lp.ki_status', 'KI-Assistent', 'ki', ['lp.ki']),
     ] %}
+  {% elif current_user.ist_reviewer %}
+    {% set eintraege = [('reviewer.dashboard', 'Aufgaben prüfen', 'aufgaben', ['reviewer.dashboard', 'reviewer.aufgabe']),
+                        ('reviewer.kommentare', 'Meine Hinweise', 'lernziele', ['reviewer.kommentare']),
+                        ('theorie.index', 'Theorie', 'theorie', ['theorie.', 'reviewer.kapitel'])] %}
   {% else %}
     <a class="neu-knopf" href="{{ url_for('lernende.neu') }}">{{ icon('plus') }} Neues Übungsblatt</a>
     {% set eintraege = [('lernende.dashboard', 'Meine Übungen', 'uebungen', ['lernende.dashboard', 'lernende.blatt']),
@@ -61,7 +67,7 @@
     {% for endpunkt, label, ic, praefixe in eintraege %}
       {% set ns = namespace(aktiv=(ep == endpunkt)) %}
       {% for p in praefixe %}{% if ep.startswith(p) %}{% set ns.aktiv = true %}{% endif %}{% endfor %}
-      <a href="{{ url_for(endpunkt) }}" class="{{ 'aktiv' if ns.aktiv }}" {{ 'aria-current=page' if ns.aktiv }}>{{ icon(ic) }}<span>{{ label }}</span></a>
+      <a href="{{ url_for(endpunkt) }}" class="{{ 'aktiv' if ns.aktiv }}" {{ 'aria-current=page' if ns.aktiv }}>{{ icon(ic) }}<span>{{ label }}</span>{% if endpunkt == 'lp_review.liste' and review_aufgaben %}<span class="nav-zahl" aria-label="{{ review_aufgaben }} offen">{{ review_aufgaben }}</span>{% endif %}</a>
     {% endfor %}
   </div>
 
@@ -74,7 +80,7 @@
     </form>
     <div class="person">
       <span class="avatar">{{ (current_user.anzeigename.split()|map('first')|join(''))[:2]|upper }}</span>
-      <span><strong>{{ current_user.anzeigename }}</strong><small>{{ 'Lehrperson' if current_user.ist_lp else (current_user.klasse.name if current_user.klasse else 'Lernende/r') }}</small></span>
+      <span><strong>{{ current_user.anzeigename }}</strong><small>{{ 'Lehrperson' if current_user.ist_lp else 'Reviewer' if current_user.ist_reviewer else (current_user.klasse.name if current_user.klasse else 'Lernende/r') }}</small></span>
     </div>
   </div>
 </nav>

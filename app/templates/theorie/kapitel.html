@@ -5,6 +5,7 @@
 <h1>{% if k.nummer %}<span class="code">{{ k.nummer }}</span> {% endif %}{{ k.titel }}
   {% if not k.sichtbar %}<span class="badge">Entwurf – nur für Lehrpersonen sichtbar</span>{% endif %}</h1>
 {% if current_user.ist_lp %}<p><a class="btn sek klein" href="{{ url_for('theorie.kapitel_bearbeiten', kapitel_id=k.id) }}">Bearbeiten</a></p>{% endif %}
+{% if current_user.ist_reviewer %}<p><a class="btn sek klein" href="{{ url_for('reviewer.kapitel', kapitel_id=k.id) }}#kommentare">Hinweis zu diesem Kapitel melden</a></p>{% endif %}
 <article class="card theorie-text">{{ inhalt }}</article>
 {% if k.lernziele %}
 <p class="muted">Lernziele: {% for lz in k.lernziele %}<span title="{{ lz.text }}">{{ lz.label }}</span>{{ ', ' if not loop.last }}{% endfor %}</p>

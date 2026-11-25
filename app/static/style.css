@@ -311,3 +311,18 @@ table.kompakt input:not([type=checkbox]) { width: 100%; padding: .3rem .45rem; }
 .kapitel-blaettern { justify-content: space-between; margin-top: 1rem; }
 .inline-bearbeiten summary { display: inline; }
 .theorie-links { display: flex; flex-wrap: wrap; gap: .2rem .6rem; font-size: .85rem; }
+
+/* Review */
+.review-eintrag { border: 1px solid var(--linie); border-radius: var(--radius-klein); padding: .6rem .8rem; margin-bottom: .6rem; background: var(--flaeche); }
+.review-eintrag blockquote { margin: .4rem 0; padding: .3rem .6rem; border-left: 3px solid var(--linie); color: var(--grau); }
+.review-antwort { margin-top: .5rem; padding: .4rem .6rem; border-radius: var(--radius-klein); background: var(--flaeche-2); }
+.review-antwort.review-ki { background: var(--blau-bg); }
+.review-formular { margin-top: 1rem; }
+.filterzeile input, .filterzeile select { padding: .35rem .5rem; }
+.diff { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.diff th, .diff td { border-top: 1px solid var(--linie); padding: .5rem; vertical-align: top; text-align: left; }
+.diff td { width: 45%; white-space: pre-wrap; }
+.diff td.alt { background: var(--fehler-bg); } .diff td.neu { background: var(--ok-bg); }
+.nav-zahl { margin-left: auto; min-width: 1.4rem; padding: 0 .4rem; border-radius: 999px; background: var(--akzent); color: #fff; font-size: .75rem; font-weight: 600; text-align: center; line-height: 1.4rem; }
+.diff mark { background: none; font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; color: inherit; }
+.diff td.alt mark { text-decoration-color: var(--fehler); } .diff td.neu mark { text-decoration-color: var(--ok); }

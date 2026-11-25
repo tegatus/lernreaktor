@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Aufgaben prüfen{% endblock %}
+{% block content %}
+<h1>Aufgaben prüfen</h1>
+<p class="muted">Lies Aufgaben und Musterlösungen und melde, was falsch oder unklar ist. Deine Hinweise werden vorbereitet
+  und von der Lehrperson übernommen. <a href="{{ url_for('reviewer.kommentare') }}">Meine Hinweise ({{ anzahl_meine }})</a></p>
+<form method="get" class="aktionen filterzeile">
+  <input name="q" value="{{ q }}" placeholder="Suche in Titel und Text">
+  <select name="thema"><option value="">alle Themen</option>
+    {% for t in themen %}<option value="{{ t.id }}" {{ 'selected' if thema == t.id }}>{{ t.name }}</option>{% endfor %}</select>
+  <button class="btn sek klein">Filtern</button>
+</form>
+<table class="tab">
+  <tr><th>Aufgabe</th><th>Themen</th><th>Typ</th><th>Verwendung</th><th></th></tr>
+  {% for a in aufgaben %}
+  <tr><td><a href="{{ url_for('reviewer.aufgabe', aufgabe_id=a.id) }}">{{ a.titel }}</a></td>
+      <td class="muted">{{ a.themen|map(attribute='name')|join(', ') }}</td>
+      <td>{{ AUFGABENTYPEN.get(a.typ, a.typ) }}</td><td>{{ VERWENDUNGEN.get(a.verwendung, a.verwendung) }}</td>
+      <td>{% if a.id in offen %}<span class="badge">Hinweis offen</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">Keine Aufgaben gefunden.</td></tr>{% endfor %}
+</table>
+{% endblock %}

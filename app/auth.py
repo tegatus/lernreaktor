@@ -23,17 +23,31 @@ def lernende_required(f):
     @wraps(f)
     @login_required
     def wrapper(*a, **kw):
-        if current_user.ist_lp:
-            return redirect(url_for("lp.dashboard"))
+        if not current_user.ist_lernende:
+            return redirect(url_for("auth.start"))
         return f(*a, **kw)
     return wrapper
+
+
+def reviewer_required(f):
+    @wraps(f)
+    @login_required
+    def wrapper(*a, **kw):
+        if not current_user.ist_reviewer:
+            abort(403)
+        return f(*a, **kw)
+    return wrapper
+
+
+def startseite(u):
+    return url_for("lp.dashboard" if u.ist_lp else "reviewer.dashboard" if u.ist_reviewer else "lernende.dashboard")
 
 
 @bp.route("/")
 def start():
     if not current_user.is_authenticated:
         return redirect(url_for("auth.login"))
-    return redirect(url_for("lp.dashboard" if current_user.ist_lp else "lernende.dashboard"))
+    return redirect(startseite(current_user))
 
 
 @bp.route("/login", methods=["GET", "POST"])

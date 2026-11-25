@@ -73,6 +73,8 @@ INAKTIV_MINUTEN=60
 #BASIS_URL=https://lernreaktor.example.ch
 # KI-Assistent (optional): Schlüssel aus der Claude Console eintragen und Dienst neu starten
 #ANTHROPIC_API_KEY=
+# Agent-Schnittstelle für Claude Code (/reviews): langen Zufallswert eintragen, z. B. mit «openssl rand -hex 32»
+#AGENT_TOKEN=
 EOF
   chown root:"$DIENSTKONTO" "$ENV_DATEI"
   chmod 640 "$ENV_DATEI"

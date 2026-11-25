@@ -26,7 +26,8 @@ def create_app(config=None):
         or "sqlite:///" + os.path.join(app.instance_path, "lernreaktor.sqlite"),
         UPLOAD_DIR=os.environ.get("UPLOAD_DIR") or os.path.join(app.instance_path, "dateien"),
         MAX_CONTENT_LENGTH=60 * 1024 * 1024,
-        BASIS_URL=os.environ.get("BASIS_URL", ""),  # öffentliche Adresse, z. B. für QR-Codes auf Blättern
+        BASIS_URL=os.environ.get("BASIS_URL", ""),
+        AGENT_TOKEN=os.environ.get("AGENT_TOKEN", ""),  # Agent-Schnittstelle für Claude Code (leer = aus)  # öffentliche Adresse, z. B. für QR-Codes auf Blättern
     )
     if config:
         app.config.update(config)
@@ -41,10 +42,11 @@ def create_app(config=None):
     app.jinja_env.globals["csrf_token"] = csrf_token
 
     from .aufgabentypen import TYPEN
-    from .models import ANTWORTFORMATE, BILDGROESSEN, NIVEAU_BESCHREIBUNG, NIVEAU_SCHWELLEN, NIVEAUS, VERWENDUNGEN
+    from .models import (ANTWORTFORMATE, BILDGROESSEN, NIVEAU_BESCHREIBUNG, NIVEAU_SCHWELLEN, NIVEAUS, REVIEW_STELLEN,
+                         VERWENDUNGEN)
     app.jinja_env.globals.update(ANTWORTFORMATE=ANTWORTFORMATE, VERWENDUNGEN=VERWENDUNGEN, BILDGROESSEN=BILDGROESSEN,
                                  AUFGABENTYPEN=TYPEN, NIVEAUS=NIVEAUS, NIVEAU_BESCHREIBUNG=NIVEAU_BESCHREIBUNG,
-                                 NIVEAU_SCHWELLEN=NIVEAU_SCHWELLEN)
+                                 NIVEAU_SCHWELLEN=NIVEAU_SCHWELLEN, REVIEW_STELLEN=REVIEW_STELLEN)
 
     @app.template_filter("datum")
     def _datum(d, mit_zeit=False):
@@ -59,11 +61,14 @@ def create_app(config=None):
     def _pkt(p):
         return "–" if p is None else f"{p:g}"
 
-    from . import auth, lernende, lp, theorie
+    from . import agent_api, auth, lernende, lp, lp_review, reviewer, theorie
     app.register_blueprint(auth.bp)
     app.register_blueprint(lernende.bp)
     app.register_blueprint(lp.bp)
     app.register_blueprint(theorie.bp)
+    app.register_blueprint(reviewer.bp)
+    app.register_blueprint(lp_review.bp)
+    app.register_blueprint(agent_api.bp)
 
     from .seed import register_cli
     register_cli(app)

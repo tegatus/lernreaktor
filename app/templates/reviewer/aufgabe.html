@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf, review_formular, review_verlauf %}
+{% block title %}{{ a.titel }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('reviewer.dashboard') }}">Aufgaben prüfen</a></p>
+<h1>{{ a.titel }} <span class="code">#{{ a.id }}</span></h1>
+<p class="muted">{{ AUFGABENTYPEN.get(a.typ, a.typ) }} · {{ a.punkte|pkt }} Punkte{% if a.k_stufe %} · K{{ a.k_stufe }}{% endif %}
+  · {{ VERWENDUNGEN.get(a.verwendung, a.verwendung) }}{% if a.themen %} · Themen: {{ a.themen|map(attribute='name')|join(', ') }}{% endif %}</p>
+{% if a.lernziele %}<p class="muted">Lernziele: {% for lz in a.lernziele %}<span title="{{ lz.text }}">{{ lz.label }}</span>{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+{% if a.typ == 'rechnung' %}<p class="muted">Rechenaufgabe: Die Zahlen sind Beispielwerte, auf jedem Blatt andere.</p>{% endif %}
+{% if fehler %}<div class="flash fehler">{{ fehler|join('; ') }}</div>{% endif %}
+<div class="zweispaltig">
+  <div class="card"><h3 style="margin-top:0">Aufgabe</h3><div class="vorschau-inhalt">{{ text }}</div></div>
+  <div class="card"><h3 style="margin-top:0">Musterlösung</h3><div class="vorschau-inhalt loesungstext">{{ loesung }}</div></div>
+</div>
+{% set kap = a.kapitel|selectattr('sichtbar')|list %}
+{% if kap %}<p class="muted">Theorie: {% for k in kap %}<a href="{{ url_for('reviewer.kapitel', kapitel_id=k.id) }}">{{ k.label }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+
+<h2 id="kommentare">Hinweise zu dieser Aufgabe</h2>
+{% for k in kommentare %}{{ review_verlauf(k) }}{% else %}<p class="muted">Noch keine Hinweise.</p>{% endfor %}
+{{ review_formular(stellen) }}
+{% endblock %}
