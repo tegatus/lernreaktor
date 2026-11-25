@@ -1,0 +1,2 @@
+# Shell-Skripte laufen unter bash (Hook, Server) und brauchen LF – auch auf Windows-Rechnern
+*.sh text eol=lf
