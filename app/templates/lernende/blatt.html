@@ -13,12 +13,22 @@
   </div>
   <div class="card">
     <h3>2 · Fotos hochladen</h3>
-    <form method="post" action="{{ url_for('lernende.hochladen', blatt_id=blatt.id) }}" enctype="multipart/form-data">{{ csrf() }}
-      <label class="feld">Fotos oder PDF-Scan (mehrere möglich, in Seitenreihenfolge)
-        <input type="file" name="dateien" accept="image/*,application/pdf" multiple required></label>
-      <button class="btn">Hochladen</button>
-    </form>
-    <p class="muted">Tipp: Blatt flach hinlegen, von oben fotografieren, gutes Licht, ganze Seite im Bild.</p>
+    <div class="kamera" id="kamera" data-url="{{ url_for('lernende.hochladen', blatt_id=blatt.id) }}">
+      <label class="btn kamera-knopf">Seite fotografieren
+        <input type="file" accept="image/*" capture="environment" id="kamera-eingabe" hidden></label>
+      <ol class="kamera-seiten" id="kamera-seiten" aria-live="polite"></ol>
+      <button type="button" class="btn" id="kamera-senden" hidden>Seiten abgeben</button>
+      <p class="kamera-status muted" id="kamera-status" role="status"></p>
+    </div>
+    <p class="muted">Tipp: Blatt flach hinlegen, von oben fotografieren, gutes Licht, ganze Seite im Bild. Eine Seite pro Foto.</p>
+    <details class="kamera-alternativ">
+      <summary>Oder vorhandene Fotos bzw. einen PDF-Scan auswählen</summary>
+      <form method="post" action="{{ url_for('lernende.hochladen', blatt_id=blatt.id) }}" enctype="multipart/form-data">{{ csrf() }}
+        <label class="feld">Fotos oder PDF-Scan (mehrere möglich, in Seitenreihenfolge)
+          <input type="file" name="dateien" accept="image/*,application/pdf" multiple required></label>
+        <button class="btn sek">Hochladen</button>
+      </form>
+    </details>
     {% for ab in blatt.abgaben %}
       <p class="muted">Abgabe vom {{ ab.hochgeladen_am|datum(true) }}: {{ ab.seiten|length }} Seite(n)</p>
     {% endfor %}
@@ -59,3 +69,4 @@
 {% endfor %}
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='kamera.js') }}"></script>{% endblock %}

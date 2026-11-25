@@ -1,7 +1,7 @@
 import os
 
-from flask import (Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request,
-                   send_file, url_for)
+from flask import (Blueprint, abort, current_app, flash, has_request_context, jsonify, redirect, render_template,
+                   request, send_file, url_for)
 from flask_login import current_user, login_required
 
 from . import pdfgen, storage
@@ -22,9 +22,16 @@ def blatt_pdf_rel(blatt, art):
     return storage.relativ("blaetter", str(blatt.id), f"{art}.pdf")
 
 
+def upload_url(blatt):
+    """Absolute Adresse der Blatt-Seite für den QR-Code (BASIS_URL, sonst die Adresse der aktuellen Anfrage)."""
+    basis = current_app.config.get("BASIS_URL") or (request.url_root if has_request_context() else "")
+    return basis.rstrip("/") + url_for("lernende.blatt", blatt_id=blatt.id) if basis else None
+
+
 def erzeuge_blatt_pdfs(blatt):
     """Schnappschuss von Aufgaben- und Lösungsblatt (spätere Änderungen an Aufgaben verändern sie nicht)."""
-    storage.speichere_bytes(blatt_pdf_rel(blatt, "aufgaben"), pdfgen.uebungsblatt_pdf(blatt, bild_pfad))
+    storage.speichere_bytes(blatt_pdf_rel(blatt, "aufgaben"),
+                            pdfgen.uebungsblatt_pdf(blatt, bild_pfad, upload_url=upload_url(blatt)))
     storage.speichere_bytes(blatt_pdf_rel(blatt, "loesung"), pdfgen.uebungsblatt_pdf(blatt, bild_pfad, loesung=True))
 
 
@@ -102,20 +109,27 @@ def blatt(blatt_id):
 @bp.route("/blatt/<int:blatt_id>/hochladen", methods=["POST"])
 @lernende_required
 def hochladen(blatt_id):
+    """Formular-Upload (Dateiauswahl) oder Kamera-Upload per fetch (X-Requested-With: fetch → JSON-Antwort)."""
     b = db.get_or_404(Uebungsblatt, blatt_id)
     if b.lernende_id != current_user.id:
         abort(403)
+    per_fetch = request.headers.get("X-Requested-With") == "fetch"
+
+    def antwort(meldung, art, status=200):
+        if per_fetch:
+            return jsonify(ok=art == "ok", meldung=meldung, ziel=url_for(".blatt", blatt_id=b.id)), status
+        flash(meldung, art)
+        return redirect(url_for(".blatt", blatt_id=b.id))
+
     dateien = [f for f in request.files.getlist("dateien") if f and f.filename]
     if not dateien:
-        flash("Bitte wähle mindestens ein Foto oder PDF aus.", "fehler")
-        return redirect(url_for(".blatt", blatt_id=b.id))
+        return antwort("Bitte wähle mindestens ein Foto oder PDF aus.", "fehler", 400)
     bilder = []
     try:
         for f in dateien:
             bilder += storage.upload_zu_seitenbildern(f)
     except ValueError as e:
-        flash(str(e), "fehler")
-        return redirect(url_for(".blatt", blatt_id=b.id))
+        return antwort(str(e), "fehler", 400)
     abgabe = Abgabe(blatt=b)
     for nr, im in enumerate(bilder, 1):
         rel = storage.speichere_bild(im, "abgaben", str(b.id))
@@ -123,8 +137,9 @@ def hochladen(blatt_id):
     db.session.add(abgabe)
     b.status = "eingereicht"
     db.session.commit()
-    flash(f"{len(bilder)} Seite(n) hochgeladen. Deine Lehrperson wird die Abgabe korrigieren.", "ok")
-    return redirect(url_for(".blatt", blatt_id=b.id))
+    if per_fetch:
+        flash(f"{len(bilder)} Seite(n) hochgeladen. Deine Lehrperson wird die Abgabe korrigieren.", "ok")
+    return antwort(f"{len(bilder)} Seite(n) hochgeladen. Deine Lehrperson wird die Abgabe korrigieren.", "ok")
 
 
 @bp.route("/blatt/<int:blatt_id>/loeschen", methods=["POST"])

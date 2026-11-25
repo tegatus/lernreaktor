@@ -69,6 +69,8 @@ LERNREAKTOR_INSTANCE=$DATEN/instance
 LERNREAKTOR_HTTPS=1
 LERNREAKTOR_PROXY=1
 INAKTIV_MINUTEN=60
+# Öffentliche Adresse für QR-Codes auf Übungsblättern (ohne: Adresse der jeweiligen Anfrage)
+#BASIS_URL=https://lernreaktor.example.ch
 # KI-Assistent (optional): Schlüssel aus der Claude Console eintragen und Dienst neu starten
 #ANTHROPIC_API_KEY=
 EOF

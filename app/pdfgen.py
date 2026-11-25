@@ -18,6 +18,8 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.graphics.barcode.qr import QrCodeWidget
+from reportlab.graphics.shapes import Drawing
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -425,7 +427,16 @@ def _loesungs_story(st, eintraege, bild_pfad):
 APP_NAME = "LernReaktor · Laborant/in EFZ Biologie"
 
 
-def uebungsblatt_pdf(blatt, bild_pfad, loesung=False):
+def _qr(url, groesse=2.6 * cm):
+    w = QrCodeWidget(url, barLevel="M")
+    x1, y1, x2, y2 = w.getBounds()
+    d = Drawing(groesse, groesse, transform=[groesse / (x2 - x1), 0, 0, groesse / (y2 - y1), 0, 0])
+    d.add(w)
+    return d
+
+
+def uebungsblatt_pdf(blatt, bild_pfad, loesung=False, upload_url=None):
+    """upload_url: Adresse der Upload-Seite – erscheint als QR-Code, damit das Handy direkt dorthin führt."""
     st = _styles()
     buf = io.BytesIO()
     aufgaben = [(ba.aufgabe, ba.seed) for ba in blatt.aufgaben]
@@ -439,10 +450,18 @@ def uebungsblatt_pdf(blatt, bild_pfad, loesung=False):
     if loesung:
         story += _loesungs_story(st, aufgaben, bild_pfad)
     else:
-        story.append(Paragraph(
+        hinweis = Paragraph(
             "Löse die Aufgaben direkt auf diesem Blatt. Fotografiere danach jede Seite gut lesbar "
             "(gerade, ohne Schatten) und lade die Fotos in der App beim Übungsblatt "
-            f"<b>{blatt.code}</b> hoch.", st["klein"]))
+            f"<b>{blatt.code}</b> hoch."
+            + (" Am schnellsten: QR-Code mit dem Handy scannen." if upload_url else ""), st["klein"])
+        if upload_url:
+            t = Table([[hinweis, _qr(upload_url)]], colWidths=[CONTENT_W - 3 * cm, 3 * cm])
+            t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                                   ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
+            story.append(t)
+        else:
+            story.append(hinweis)
         story.append(Spacer(1, 12))
         story += _aufgaben_story(st, aufgaben, bild_pfad)
     doc.build(story, canvasmaker=_seitenrahmen_factory(APP_NAME, blatt.code + (" · LÖSUNG" if loesung else "")))

@@ -259,3 +259,18 @@ table.kompakt input:not([type=checkbox]) { width: 100%; padding: .3rem .45rem; }
 @keyframes drehen { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Kamera-Upload (Übungsblatt) */
+.kamera { display: grid; gap: .6rem; justify-items: start; }
+.kamera-knopf { cursor: pointer; }
+.kamera-seiten { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; width: 100%; }
+.kamera-seiten:empty { display: none; }
+.kamera-seiten li { display: flex; align-items: center; gap: .7rem; padding: .35rem; border: 1px solid var(--linie); border-radius: var(--radius-klein); background: var(--flaeche-2); }
+.kamera-seiten img { width: 56px; height: 72px; object-fit: cover; border-radius: 4px; background: #fff; }
+.kamera-seiten span:first-of-type { flex: 1; }
+.kamera-aktionen { display: flex; gap: .15rem; }
+.kamera-aktionen .symbolknopf { min-width: 2.4rem; min-height: 2.4rem; border-color: var(--linie); }
+.kamera-status:empty { display: none; }
+.kamera-alternativ { margin-top: .4rem; }
+.kamera-alternativ summary { cursor: pointer; color: var(--grau); }
+@media (max-width: 600px) { .kamera, .kamera .btn { width: 100%; } .kamera .btn { justify-content: center; } }

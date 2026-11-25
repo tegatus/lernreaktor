@@ -26,6 +26,7 @@ def create_app(config=None):
         or "sqlite:///" + os.path.join(app.instance_path, "lernreaktor.sqlite"),
         UPLOAD_DIR=os.environ.get("UPLOAD_DIR") or os.path.join(app.instance_path, "dateien"),
         MAX_CONTENT_LENGTH=60 * 1024 * 1024,
+        BASIS_URL=os.environ.get("BASIS_URL", ""),  # öffentliche Adresse, z. B. für QR-Codes auf Blättern
     )
     if config:
         app.config.update(config)

@@ -637,3 +637,51 @@ def test_csrf_konstante_zeit_und_neue_sitzung_beim_login(tmp_path):
     import inspect
     from app import sicherheit
     assert "compare_digest" in inspect.getsource(sicherheit.csrf_pruefen)
+
+
+# ---------------------------------------------------------------- Kamera-Upload
+
+def _blatt_fuer(app, client):
+    with app.app_context():
+        qpcr = Thema.query.filter_by(name="qPCR").one().id
+    client.post("/lernende/neu", data={"thema": qpcr, "anzahl": 2})
+    with app.app_context():
+        return Uebungsblatt.query.order_by(Uebungsblatt.id.desc()).first().id
+
+
+def _jpeg(farbe="white"):
+    buf = io.BytesIO()
+    Image.new("RGB", (600, 850), farbe).save(buf, "JPEG")
+    buf.seek(0)
+    return buf
+
+
+def test_kamera_upload_mehrere_seiten_als_eine_abgabe(app):
+    c = app.test_client()
+    login(c, "lea", "lernen-2026")
+    bid = _blatt_fuer(app, c)
+    seite = c.get(f"/blatt/{bid}").get_data(as_text=True)
+    assert 'capture="environment"' in seite and "kamera.js" in seite
+    r = c.post(f"/blatt/{bid}/hochladen", headers={"X-Requested-With": "fetch"}, content_type="multipart/form-data",
+               data={"dateien": [(_jpeg(), "seite-1.jpg"), (_jpeg("gray"), "seite-2.jpg"), (_jpeg(), "seite-3.jpg")]})
+    d = r.get_json()
+    assert r.status_code == 200 and d["ok"] and d["ziel"] == f"/blatt/{bid}"
+    with app.app_context():
+        b = db.session.get(Uebungsblatt, bid)
+        assert b.status == "eingereicht" and len(b.abgaben) == 1 and [s.nr for s in b.abgaben[0].seiten] == [1, 2, 3]
+    # Fehler kommen per fetch als JSON zurück
+    r = c.post(f"/blatt/{bid}/hochladen", headers={"X-Requested-With": "fetch"}, content_type="multipart/form-data",
+               data={})
+    assert r.status_code == 400 and not r.get_json()["ok"]
+
+
+def test_qr_code_auf_uebungsblatt(app):
+    app.config["BASIS_URL"] = "https://lernreaktor.example.ch/"
+    c = app.test_client()
+    login(c, "lea", "lernen-2026")
+    bid = _blatt_fuer(app, c)
+    pdf = c.get(f"/blatt/{bid}/aufgaben.pdf").data
+    assert "QR-Code" in pdf_text(pdf)
+    from app.lernende import upload_url
+    with app.test_request_context("/"):
+        assert upload_url(db.session.get(Uebungsblatt, bid)) == f"https://lernreaktor.example.ch/blatt/{bid}"
