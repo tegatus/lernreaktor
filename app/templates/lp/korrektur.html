@@ -46,7 +46,7 @@
   <aside class="seitenleiste card" id="bewertung">
     <h3 style="margin-top:0">Bewertung</h3>
     <label class="muted"><input type="checkbox" id="loesung-anzeigen"> Musterlösungen einblenden</label>
-    <div id="aufgabenliste" style="margin-top:.6rem">
+    <div id="aufgabenliste" style="margin-top:.6rem" data-schwellen="{{ NIVEAU_SCHWELLEN|join(',') }}">
     {% for ba in blatt.aufgaben %}
       <div class="aufgabe" data-id="{{ ba.id }}">
         <div class="punktzeile">
@@ -54,6 +54,11 @@
           <input type="text" inputmode="decimal" class="punkte" value="{{ '' if ba.punkte_erreicht is none else ba.punkte_erreicht|pkt }}"
                  placeholder="/{{ ba.aufgabe.punkte|pkt }}" data-max="{{ ba.aufgabe.punkte }}" title="max. {{ ba.aufgabe.punkte|pkt }}">
         </div>
+        <label class="niveauzeile">Niveau
+          <select class="niveau" data-manuell="{{ '1' if ba.niveau else '' }}">
+            <option value="">–</option>
+            {% for n, name in NIVEAUS.items() %}<option value="{{ n }}" {{ 'selected' if ba.niveau == n }}>{{ n }} · {{ name }}</option>{% endfor %}
+          </select></label>
         <div class="loesungstext">{{ loesung_html(ba) }}</div>
         <textarea class="kommentar" rows="2" placeholder="Kommentar zu Aufgabe {{ ba.position }}">{{ ba.kommentar or '' }}</textarea>
       </div>

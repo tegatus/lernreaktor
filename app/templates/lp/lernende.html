@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% from "_macros.html" import csrf, status_badge %}
+{% extends "base.html" %}{% from "_macros.html" import csrf, niveau_chip, niveau_legende, status_badge %}
 {% block title %}{{ u.anzeigename }}{% endblock %}
 {% block content %}
 <h1>{{ u.anzeigename }} <span class="muted">({{ u.benutzername }}, {{ u.klasse.name }})</span></h1>
@@ -7,15 +7,27 @@
     <button class="btn sek klein">Passwort zurücksetzen</button></form>
 </div>
 
-{% if stand %}
-<h2>Lernstand nach Thema (korrigierte Aufgaben)</h2>
+<h2>Kompetenzstand</h2>
+{% if ks.ziele or ks.themen %}
+{{ niveau_legende() }}
 <div class="grid">
-{% for thema, (e, m) in stand|dictsort %}
-  <div class="card"><strong>{{ thema }}</strong> – {{ e|pkt }} / {{ m|pkt }} P. ({{ (100 * e / m)|round|int if m else 0 }} %)
-    <div class="balken"><div style="width: {{ (100 * e / m) if m else 0 }}%"></div></div></div>
-{% endfor %}
+  <div class="card">
+    <h3 style="margin-top:0">Themen</h3>
+    <div class="chips">{% for t, st in ks.themen|dictsort %}
+      {% set pk = stand.get(t) %}{{ niveau_chip(st, t ~ (' · ' ~ (100 * pk[0] / pk[1])|round|int ~ ' % der Punkte' if pk and pk[1]), t) }}
+    {% endfor %}</div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Kompetenzziele (BiVo)</h3>
+    {% for b, hks in bivo %}
+      <p style="margin:.5rem 0 .2rem"><strong>{{ b.code }}</strong> {{ b.titel }}</p>
+      {% for hk, lz in hks %}<div class="chips" style="margin-bottom:.3rem" title="{{ hk.titel }}">
+        {% for l in lz %}{{ niveau_chip(ks.ziele[l.code], l.code ~ ' (K' ~ l.k_stufe ~ '): ' ~ l.text, l.code) }}{% endfor %}
+      </div>{% endfor %}
+    {% endfor %}
+  </div>
 </div>
-{% endif %}
+{% else %}<p class="muted">Noch keine korrigierten Aufgaben mit Niveau.</p>{% endif %}
 
 <h2>Übungsblätter, Lösungen &amp; Abgaben</h2>
 <table class="tab">

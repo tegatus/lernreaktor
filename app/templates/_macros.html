@@ -72,3 +72,17 @@
   {% endif %}
 </div>
 {% endmacro %}
+
+{# Kompetenzniveau: Zelle/Chip mit Ziffer (Farbe ist nie die einzige Information) und Tooltip #}
+{% macro niveau_chip(st, bezeichnung, text=none) %}
+{%- set n = st.niveau if st else none -%}
+{%- set info = bezeichnung ~ ': ' ~ (NIVEAUS[n] ~ ' (' ~ st.anzahl ~ ' Bewertung' ~ ('en' if st.anzahl != 1) ~ ', zuletzt ' ~ st.zuletzt|datum ~ ')' if n else 'noch nicht bearbeitet') -%}
+<span class="niv niv-{{ n or 0 }}" title="{{ info }}" aria-label="{{ info }}">{% if text is not none %}{{ text }} <b>{{ n or '·' }}</b>{% else %}{{ n or '·' }}{% endif %}</span>
+{%- endmacro %}
+
+{% macro niveau_legende() %}
+<div class="niv-legende" aria-label="Legende Kompetenzniveau">
+  {% for n, name in NIVEAUS.items() %}<span class="eintrag"><span class="niv niv-{{ n }}">{{ n }}</span>{{ name }} <span class="muted">– {{ NIVEAU_BESCHREIBUNG[n] }}</span></span>{% endfor %}
+  <span class="eintrag"><span class="niv niv-0">·</span>noch nicht bearbeitet</span>
+</div>
+{% endmacro %}

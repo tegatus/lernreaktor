@@ -41,9 +41,10 @@ def create_app(config=None):
     app.jinja_env.globals["csrf_token"] = csrf_token
 
     from .aufgabentypen import TYPEN
-    from .models import ANTWORTFORMATE, BILDGROESSEN, VERWENDUNGEN
+    from .models import ANTWORTFORMATE, BILDGROESSEN, NIVEAU_BESCHREIBUNG, NIVEAU_SCHWELLEN, NIVEAUS, VERWENDUNGEN
     app.jinja_env.globals.update(ANTWORTFORMATE=ANTWORTFORMATE, VERWENDUNGEN=VERWENDUNGEN, BILDGROESSEN=BILDGROESSEN,
-                                 AUFGABENTYPEN=TYPEN)
+                                 AUFGABENTYPEN=TYPEN, NIVEAUS=NIVEAUS, NIVEAU_BESCHREIBUNG=NIVEAU_BESCHREIBUNG,
+                                 NIVEAU_SCHWELLEN=NIVEAU_SCHWELLEN)
 
     @app.template_filter("datum")
     def _datum(d, mit_zeit=False):

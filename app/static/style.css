@@ -274,3 +274,28 @@ table.kompakt input:not([type=checkbox]) { width: 100%; padding: .3rem .45rem; }
 .kamera-alternativ { margin-top: .4rem; }
 .kamera-alternativ summary { cursor: pointer; color: var(--grau); }
 @media (max-width: 600px) { .kamera, .kamera .btn { width: 100%; } .kamera .btn { justify-content: center; } }
+
+/* Kompetenzniveau – geordnete Skala in einem Farbton (validiert: hell auf #fff, dunkel auf #30302e) */
+:root { --niv-1: #86b6ef; --niv-2: #3987e5; --niv-3: #1c5cab; --niv-4: #0d366b;
+        --niv-1-text: #1f1e1d; --niv-2-text: #ffffff; --niv-3-text: #ffffff; --niv-4-text: #ffffff; --niv-0: var(--flaeche-2); }
+:root[data-theme="dark"] { --niv-1: #2a78d6; --niv-2: #5598e7; --niv-3: #86b6ef; --niv-4: #cde2fb;
+        --niv-1-text: #ffffff; --niv-2-text: #1f1e1d; --niv-3-text: #1f1e1d; --niv-4-text: #1f1e1d; }
+.niveauzeile { display: flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--grau); margin: .2rem 0 .35rem; }
+.niveauzeile select { flex: 1; padding: .3rem .4rem; }
+.niv { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.7rem; padding: 0 .4rem;
+       border-radius: 6px; font-size: .78rem; font-weight: 600; background: var(--niv-0); color: var(--grau); white-space: nowrap; }
+.niv-1 { background: var(--niv-1); color: var(--niv-1-text); } .niv-2 { background: var(--niv-2); color: var(--niv-2-text); }
+.niv-3 { background: var(--niv-3); color: var(--niv-3-text); } .niv-4 { background: var(--niv-4); color: var(--niv-4-text); }
+.niv-legende { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; margin: .4rem 0 1rem; font-size: .85rem; }
+.niv-legende span.eintrag { display: inline-flex; gap: .4rem; align-items: center; }
+.matrix-rahmen { overflow-x: auto; border: 1px solid var(--linie); border-radius: var(--radius-klein); margin-bottom: 1rem; }
+.matrix { border-collapse: separate; border-spacing: 2px; font-size: .82rem; }
+.matrix th, .matrix td { padding: 0; text-align: center; }
+.matrix th.name { text-align: left; padding: 0 .7rem 0 .4rem; position: sticky; left: 0; background: var(--flaeche); white-space: nowrap; font-weight: 500; }
+.matrix thead th { font-weight: 500; color: var(--grau); padding: .3rem .15rem; vertical-align: bottom; }
+.matrix thead th.gruppe { text-align: left; color: var(--text); border-bottom: 1px solid var(--linie); }
+.matrix td .niv { width: 2.6rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.chips .niv { min-width: 3.2rem; }
+.chips .niv { gap: .35rem; font-weight: 500; }
+.chips .niv b { font-weight: 700; }

@@ -263,6 +263,20 @@ class Uebungsblatt(db.Model):
         return self.abgaben[-1] if self.abgaben else None
 
 
+# Kompetenzniveau einer korrigierten Aufgabe. 1–3 werden aus den Punkten vorgeschlagen, 4 nur von Hand.
+NIVEAUS = {1: "Gestartet", 2: "Solide Basis", 3: "Fortgeschritten", 4: "Instruktor"}
+NIVEAU_BESCHREIBUNG = {1: "gerade begonnen, noch viele Korrekturen", 2: "solide Basis, wenige Fehler",
+                       3: "fortgeschritten, fast fehlerfrei", 4: "kann es anderen erklären"}
+NIVEAU_SCHWELLEN = (0.5, 0.8)  # Anteil der Punkte: < 50 % → 1, < 80 % → 2, sonst 3
+
+
+def niveau_aus_punkten(erreicht, maximum):
+    if erreicht is None or not maximum:
+        return None
+    anteil = erreicht / maximum
+    return 1 if anteil < NIVEAU_SCHWELLEN[0] else 2 if anteil < NIVEAU_SCHWELLEN[1] else 3
+
+
 class BlattAufgabe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     blatt_id = db.Column(db.Integer, db.ForeignKey("uebungsblatt.id"), nullable=False)
@@ -273,6 +287,7 @@ class BlattAufgabe(db.Model):
     seed = db.Column(db.Integer)  # Zufallszahlen/Reihenfolge dieser Aufgabe auf diesem Blatt
     punkte_erreicht = db.Column(db.Float)
     kommentar = db.Column(db.Text, default="")
+    niveau = db.Column(db.Integer)  # siehe NIVEAUS
 
 
 class Abgabe(db.Model):
@@ -358,6 +373,7 @@ SPALTEN_NACHTRAG = [  # (Tabelle, Spalte, DDL) – für bestehende Datenbanken o
     ("blatt_aufgabe", "seed", "INTEGER"),
     ("pruefung_aufgabe", "seed", "INTEGER"),
     ("user", "passwort_aendern", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("blatt_aufgabe", "niveau", "INTEGER"),
 ]
 
 

@@ -13,11 +13,13 @@ from PIL import Image
 
 from . import importers, pdfgen, storage
 from .aufgabentypen import TYPEN, neuer_seed, pruefen, rendern, zahl
+from .kompetenzstand import kompetenzstand
 from .markup import bild_warnungen
 from .auth import lp_required
 from .lernende import auswahl_aus_request, bild_pfad, blatt_pdf_rel
 from .models import (ANTWORTFORMATE, BILDGROESSEN, VERWENDUNGEN, Aufgabe, AufgabeBild, AbgabeSeite, Bereich, Klasse, Leistungsziel,
-                     Lernziel, Pruefung, PruefungAufgabe, Thema, Uebungsblatt, User, db, now)
+                     Lernziel, NIVEAUS, Pruefung, PruefungAufgabe, Thema, Uebungsblatt, User, db, niveau_aus_punkten,
+                     now)
 from .selection import (geuebte_aufgaben_der_klasse, stelle_pruefung_zusammen, ziele_beschreiben)
 
 bp = Blueprint("lp", __name__, url_prefix="/lp")
@@ -106,6 +108,36 @@ def klasse(klasse_id):
     return render_template("lp/klasse.html", klasse=k, neue_zugaenge=neue_zugaenge)
 
 
+def _geuebte_codes_und_themen():
+    """Leistungsziele (direkt + über Lernziele) und Themen, zu denen es aktive Übungsaufgaben gibt."""
+    codes, themen = set(), set()
+    for a in Aufgabe.query.filter(Aufgabe.aktiv.is_(True), Aufgabe.verwendung != "pruefung"):
+        codes |= {l.code for l in a.leistungsziele} | {l.code for lz in a.lernziele for l in lz.leistungsziele}
+        themen |= {t.name for t in a.themen}
+    return codes, themen
+
+
+@bp.route("/klassen/<int:klasse_id>/kompetenzen")
+@lp_required
+def klasse_kompetenzen(klasse_id):
+    k = db.get_or_404(Klasse, klasse_id)
+    pruefe_klasse(k)
+    ansicht = "themen" if request.args.get("ansicht") == "themen" else "bivo"
+    stand = kompetenzstand([u.id for u in k.lernende])
+    codes, themen = _geuebte_codes_und_themen()
+    for s in stand.values():  # bewertete Ziele immer zeigen, auch wenn ihre Aufgaben inzwischen inaktiv sind
+        codes |= set(s["ziele"])
+        themen |= set(s["themen"])
+    bereiche = []
+    for b in Bereich.query.order_by(Bereich.code):
+        hks = [(hk, [l for l in hk.leistungsziele if l.code in codes]) for hk in b.handlungskompetenzen]
+        hks = [(hk, lz) for hk, lz in hks if lz]
+        if hks:
+            bereiche.append((b, hks))
+    return render_template("lp/kompetenzmatrix.html", klasse=k, stand=stand, bereiche=bereiche, ansicht=ansicht,
+                           themen=sorted(themen, key=str.lower))
+
+
 @bp.route("/lernende/<int:user_id>")
 @lp_required
 def lernende_profil(user_id):
@@ -122,7 +154,14 @@ def lernende_profil(user_id):
                 key = t.name if t else "ohne Thema"
                 e, m = stand.get(key, (0, 0))
                 stand[key] = (e + ba.punkte_erreicht, m + ba.aufgabe.punkte)
-    return render_template("lp/lernende.html", u=u, blaetter=blaetter, stand=stand)
+    ks = kompetenzstand([u.id])[u.id]
+    bivo = []  # [(Bereich, [(Handlungskompetenz, [Leistungsziel])])] – nur bearbeitete Ziele
+    for b in Bereich.query.order_by(Bereich.code):
+        hks = [(hk, [l for l in hk.leistungsziele if l.code in ks["ziele"]]) for hk in b.handlungskompetenzen]
+        hks = [(hk, lz) for hk, lz in hks if lz]
+        if hks:
+            bivo.append((b, hks))
+    return render_template("lp/lernende.html", u=u, blaetter=blaetter, stand=stand, ks=ks, bivo=bivo)
 
 
 @bp.route("/lernende/<int:user_id>/passwort", methods=["POST"])
@@ -174,6 +213,8 @@ def korrektur_speichern(blatt_id):
             p = float(str(p).replace(",", "."))
             ba.punkte_erreicht = max(0.0, min(p, ba.aufgabe.punkte))
         ba.kommentar = (eintrag.get("kommentar") or "")[:5000]
+        n = str(eintrag.get("niveau") or "")
+        ba.niveau = int(n) if n.isdigit() and int(n) in NIVEAUS else None
     b.gesamtkommentar = (d.get("gesamtkommentar") or "")[:10000]
     b.loesung_freigegeben = bool(d.get("loesung_freigeben"))
     seiten_ok = {s.id: s for a in b.abgaben for s in a.seiten}
@@ -192,6 +233,9 @@ def korrektur_speichern(blatt_id):
         elif not s.get("annotationen"):
             seite.bild_korrigiert = None
     if d.get("abschliessen"):
+        for ba in b.aufgaben:
+            if ba.niveau is None:
+                ba.niveau = niveau_aus_punkten(ba.punkte_erreicht, ba.aufgabe.punkte)
         b.status = "korrigiert"
         b.korrigiert_am = now()
     db.session.commit()

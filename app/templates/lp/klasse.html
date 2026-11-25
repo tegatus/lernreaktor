@@ -2,6 +2,7 @@
 {% block title %}{{ klasse.name }}{% endblock %}
 {% block content %}
 <h1>Klasse {{ klasse.name }}</h1>
+<div class="aktionen"><a class="btn sek klein" href="{{ url_for('lp.klasse_kompetenzen', klasse_id=klasse.id) }}">Kompetenzstand der Klasse</a></div>
 {% if neue_zugaenge %}
 <div class="card">
   <h3>Neue Zugänge – bitte jetzt ausdrucken oder notieren</h3>

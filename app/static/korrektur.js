@@ -138,6 +138,20 @@
   }
   liste.addEventListener('input', total); total();
 
+  // Niveau: aus den Punkten vorschlagen, bis es von Hand gewählt wurde (Instruktor nur von Hand)
+  const schwellen = liste.dataset.schwellen.split(',').map(Number);
+  function niveauVorschlag(d) {
+    const sel = d.querySelector('.niveau'), inp = d.querySelector('.punkte');
+    if (sel.dataset.manuell) return;
+    const v = parseFloat(inp.value.replace(',', '.')), max = parseFloat(inp.dataset.max);
+    sel.value = (isNaN(v) || !max) ? '' : String(v / max < schwellen[0] ? 1 : v / max < schwellen[1] ? 2 : 3);
+  }
+  liste.querySelectorAll('.aufgabe').forEach(niveauVorschlag);
+  liste.addEventListener('input', e => { if (e.target.classList.contains('punkte')) niveauVorschlag(e.target.closest('.aufgabe')); });
+  liste.addEventListener('change', e => {
+    if (e.target.classList.contains('niveau')) e.target.dataset.manuell = e.target.value ? '1' : '';
+  });
+
   document.getElementById('loesung-anzeigen').addEventListener('change', e =>
     document.getElementById('bewertung').classList.toggle('zeige-loesung', e.target.checked));
 
@@ -160,6 +174,7 @@
       loesung_freigeben: document.getElementById('loesung-freigeben').checked,
       aufgaben: [...liste.querySelectorAll('.aufgabe')].map(d => ({
         id: +d.dataset.id, punkte: d.querySelector('.punkte').value.trim(), kommentar: d.querySelector('.kommentar').value,
+        niveau: d.querySelector('.niveau').value,
       })),
       seiten: seiten.filter(s => s.geaendert || abschliessen).map(s => {
         zeichne(s);

@@ -685,3 +685,75 @@ def test_qr_code_auf_uebungsblatt(app):
     from app.lernende import upload_url
     with app.test_request_context("/"):
         assert upload_url(db.session.get(Uebungsblatt, bid)) == f"https://lernreaktor.example.ch/blatt/{bid}"
+
+
+# ---------------------------------------------------------------- Kompetenzniveau
+
+def _korrigieren(app, lp, bid, punkte_fn, niveaus=None):
+    with app.app_context():
+        blatt = db.session.get(Uebungsblatt, bid)
+        aufg = [{"id": ba.id, "punkte": str(punkte_fn(ba)), "kommentar": "",
+                 "niveau": (niveaus or {}).get(ba.position, "")} for ba in blatt.aufgaben]
+    return lp.post(f"/lp/korrektur/{bid}", json={"aufgaben": aufg, "abschliessen": True, "seiten": []})
+
+
+def test_niveau_aus_punkten_und_von_hand(app):
+    from app.models import BlattAufgabe, niveau_aus_punkten
+    assert [niveau_aus_punkten(e, 10) for e in (0, 4.9, 5, 7.9, 8, 10)] == [1, 1, 2, 2, 3, 3]
+    assert niveau_aus_punkten(None, 10) is None
+    c, lp = app.test_client(), app.test_client()
+    login(c, "lea", "lernen-2026")
+    login(lp, "lp", "lp-demo-2026")
+    bid = _blatt_fuer(app, c)
+    seite = lp.get(f"/lp/korrektur/{bid}").get_data(as_text=True)
+    assert 'class="niveau"' in seite and "Instruktor" in seite
+    # Aufgabe 1 von Hand auf Instruktor, Aufgabe 2 ohne Angabe → aus den Punkten (volle Punktzahl → 3)
+    r = _korrigieren(app, lp, bid, lambda ba: ba.aufgabe.punkte, {1: "4"})
+    assert r.get_json()["status"] == "korrigiert"
+    with app.app_context():
+        assert [ba.niveau for ba in db.session.get(Uebungsblatt, bid).aufgaben] == [4, 3]
+
+
+def test_kompetenzstand_regeln(app):
+    from datetime import datetime
+    from app.kompetenzstand import Stand
+    t = [datetime(2026, 1, d) for d in range(1, 8)]
+    assert Stand().niveau is None
+    assert Stand([(t[0], 1), (t[1], 2)]).niveau == 2                       # 1.5 → 2
+    assert Stand([(t[0], 1), (t[1], 1), (t[2], 3), (t[3], 3)]).niveau == 2  # nur die letzten 3: 1,3,3 → 2.33
+    assert Stand([(t[0], 4), (t[1], 3)]).niveau == 3                       # Instruktor nur, wenn zuletzt
+    assert Stand([(t[0], 3), (t[1], 3), (t[2], 4)]).niveau == 4
+    assert Stand([(t[0], 4), (t[1], 4), (t[2], 3)]).niveau == 3            # Durchschnitt 3.67 → höchstens 3
+
+
+def test_kompetenzmatrix_der_klasse(app):
+    from app.kompetenzstand import kompetenzstand
+    c, lp = app.test_client(), app.test_client()
+    login(c, "lea", "lernen-2026")
+    login(lp, "lp", "lp-demo-2026")
+    bid = _blatt_fuer(app, c)
+    _korrigieren(app, lp, bid, lambda ba: 0)  # keine Punkte → Gestartet
+    with app.app_context():
+        lea = User.query.filter_by(benutzername="lea").one()
+        blatt = db.session.get(Uebungsblatt, bid)
+        erwartet = {l.code for ba in blatt.aufgaben for l in ba.aufgabe.leistungsziele}
+        erwartet |= {l.code for ba in blatt.aufgaben for lz in ba.aufgabe.lernziele for l in lz.leistungsziele}
+        ks = kompetenzstand([lea.id])[lea.id]
+        assert set(ks["ziele"]) == erwartet and all(s.niveau == 1 for s in ks["ziele"].values())
+        assert "qPCR" in ks["themen"]
+        klasse_id, lea_id = lea.klasse_id, lea.id
+    seite = lp.get(f"/lp/klassen/{klasse_id}/kompetenzen").get_data(as_text=True)
+    code = sorted(erwartet)[0]
+    assert f"Lea Muster · {code}: Gestartet (" in seite and "noch nicht bearbeitet" in seite
+    assert "Lea Muster · qPCR: Gestartet" in lp.get(f"/lp/klassen/{klasse_id}/kompetenzen?ansicht=themen").get_data(as_text=True)
+    assert "Kompetenzziele (BiVo)" in lp.get(f"/lp/lernende/{lea_id}").get_data(as_text=True)
+    # Lernende haben keinen Zugang, andere LP sehen fremde Klassen nicht
+    assert c.get(f"/lp/klassen/{klasse_id}/kompetenzen").status_code == 403
+    with app.app_context():
+        fremd = User(benutzername="lp2", anzeigename="LP 2", rolle="lp")
+        fremd.set_passwort("lp2-passwort-2026")
+        db.session.add(fremd)
+        db.session.commit()
+    lp2 = app.test_client()
+    login(lp2, "lp2", "lp2-passwort-2026")
+    assert lp2.get(f"/lp/klassen/{klasse_id}/kompetenzen").status_code == 403

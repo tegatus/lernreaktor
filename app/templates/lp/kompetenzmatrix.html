@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% from "_macros.html" import niveau_chip, niveau_legende %}
+{% block title %}Kompetenzen {{ klasse.name }}{% endblock %}
+{% block content %}
+<h1>Kompetenzstand {{ klasse.name }}</h1>
+<p class="muted">Aus korrigierten Übungsaufgaben: Durchschnitt der letzten 3 Bewertungen pro Ziel. Zelle antippen bzw. darauf zeigen für Details.</p>
+<div class="aktionen">
+  <a class="btn {{ 'sek' if ansicht != 'bivo' }} klein" href="{{ url_for('lp.klasse_kompetenzen', klasse_id=klasse.id) }}">Kompetenzziele (BiVo)</a>
+  <a class="btn {{ 'sek' if ansicht != 'themen' }} klein" href="{{ url_for('lp.klasse_kompetenzen', klasse_id=klasse.id, ansicht='themen') }}">Themen</a>
+  <a class="btn sek klein" href="{{ url_for('lp.klasse', klasse_id=klasse.id) }}">Zurück zur Klasse</a>
+</div>
+{{ niveau_legende() }}
+
+{% if not klasse.lernende %}<p class="muted">Noch keine Lernenden in dieser Klasse.</p>
+{% elif ansicht == 'themen' %}
+  {% if themen %}
+  <div class="matrix-rahmen"><table class="matrix">
+    <thead><tr><th class="name">Lernende</th>{% for t in themen %}<th>{{ t }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for u in klasse.lernende %}
+      <tr><th class="name" scope="row"><a href="{{ url_for('lp.lernende_profil', user_id=u.id) }}">{{ u.anzeigename }}</a></th>
+        {% for t in themen %}<td>{{ niveau_chip(stand[u.id].themen.get(t), u.anzeigename ~ ' · ' ~ t) }}</td>{% endfor %}</tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">Noch keine Themen mit Übungsaufgaben.</p>{% endif %}
+{% else %}
+  {% for b, hks in bereiche %}
+  <details class="matrix-bereich" open>
+    <summary><h2 style="display:inline">{{ b.code }} · {{ b.titel }}</h2></summary>
+    <div class="matrix-rahmen"><table class="matrix">
+      <thead>
+        <tr><th class="name"></th>{% for hk, lz in hks %}<th class="gruppe" colspan="{{ lz|length }}" title="{{ hk.titel }}">{{ hk.code }}</th>{% endfor %}</tr>
+        <tr><th class="name">Lernende</th>{% for hk, lz in hks %}{% for l in lz %}<th title="{{ l.code }} (K{{ l.k_stufe }}): {{ l.text }}">{{ l.code }}</th>{% endfor %}{% endfor %}</tr>
+      </thead>
+      <tbody>{% for u in klasse.lernende %}
+        <tr><th class="name" scope="row"><a href="{{ url_for('lp.lernende_profil', user_id=u.id) }}">{{ u.anzeigename }}</a></th>
+          {% for hk, lz in hks %}{% for l in lz %}<td>{{ niveau_chip(stand[u.id].ziele.get(l.code), u.anzeigename ~ ' · ' ~ l.code) }}</td>{% endfor %}{% endfor %}</tr>
+      {% endfor %}</tbody>
+    </table></div>
+  </details>
+  {% else %}<p class="muted">Noch keine Kompetenzziele mit Übungsaufgaben.</p>{% endfor %}
+{% endif %}
+{% endblock %}
