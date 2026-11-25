@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ k.label }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('theorie.index') }}#dok-{{ k.dokument_id }}">Theorie</a> · {{ k.dokument.titel }}</p>
+<h1>{% if k.nummer %}<span class="code">{{ k.nummer }}</span> {% endif %}{{ k.titel }}
+  {% if not k.sichtbar %}<span class="badge">Entwurf – nur für Lehrpersonen sichtbar</span>{% endif %}</h1>
+{% if current_user.ist_lp %}<p><a class="btn sek klein" href="{{ url_for('theorie.kapitel_bearbeiten', kapitel_id=k.id) }}">Bearbeiten</a></p>{% endif %}
+<article class="card theorie-text">{{ inhalt }}</article>
+{% if k.lernziele %}
+<p class="muted">Lernziele: {% for lz in k.lernziele %}<span title="{{ lz.text }}">{{ lz.label }}</span>{{ ', ' if not loop.last }}{% endfor %}</p>
+{% endif %}
+<nav class="aktionen kapitel-blaettern" aria-label="Kapitel blättern">
+  {% if vorher %}<a class="btn sek" href="{{ url_for('theorie.kapitel', kapitel_id=vorher.id) }}">← {{ vorher.label }}</a>{% endif %}
+  {% if nachher %}<a class="btn sek" href="{{ url_for('theorie.kapitel', kapitel_id=nachher.id) }}">{{ nachher.label }} →</a>{% endif %}
+</nav>
+{% endblock %}

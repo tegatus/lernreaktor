@@ -757,3 +757,79 @@ def test_kompetenzmatrix_der_klasse(app):
     lp2 = app.test_client()
     login(lp2, "lp2", "lp2-passwort-2026")
     assert lp2.get(f"/lp/klassen/{klasse_id}/kompetenzen").status_code == 403
+
+
+# ---------------------------------------------------------------- Theorie
+
+def test_theorie_kapitel_mit_aufgaben_verknuepft(app):
+    from app.models import TheorieDokument, TheorieKapitel
+    lp, c = app.test_client(), app.test_client()
+    login(lp, "lp", "lp-demo-2026")
+    login(c, "lea", "lernen-2026")
+    lp.post("/lp/theorie/dokument", data={"titel": "Skript qPCR"})
+    with app.app_context():
+        dok = TheorieDokument.query.one().id
+        lz = Lernziel.query.join(Thema).filter(Thema.name == "qPCR").first()
+        lz_id = lz.id
+        aufgabe = Aufgabe.query.filter(Aufgabe.lernziele.any(Lernziel.id == lz_id),
+                                       Aufgabe.verwendung != "pruefung").first()
+        aufgabe_id, aufgabe_titel = aufgabe.id, aufgabe.titel
+    text = "## Prinzip\nDie **Fluoreszenz** steigt mit jedem Zyklus.\n[[bild:1]]"
+    r = lp.post("/lp/theorie/kapitel/neu", content_type="multipart/form-data", follow_redirects=True, data={
+        "dokument_id": dok, "nummer": "3.2", "titel": "Ct-Wert", "text": text, "sichtbar": "1", "lernziel": lz_id,
+        "bilder_neu": (_bild("blue"), "kurve.png")})
+    assert "Kapitel gespeichert" in r.get_data(as_text=True)
+    lp.post("/lp/theorie/kapitel/neu", data={"dokument_id": dok, "nummer": "3.10", "titel": "Entwurf", "sichtbar": "0"})
+    with app.app_context():
+        k = TheorieKapitel.query.filter_by(titel="Ct-Wert").one()
+        entwurf = TheorieKapitel.query.filter_by(titel="Entwurf").one()
+        kid, eid, bild_id = k.id, entwurf.id, k.bilder[0].id
+        assert [x.titel for x in k.dokument.kapitel_sortiert] == ["Ct-Wert", "Entwurf"]  # 3.2 vor 3.10
+
+    # Aufgaben-Editor schlägt das Kapitel vor (gemeinsames Lernziel) und speichert die Verknüpfung
+    form = lp.get(f"/lp/aufgaben/{aufgabe_id}").get_data(as_text=True)
+    assert "teilt ein Lernziel" in form and f'name="kapitel" value="{kid}"' in form
+    with app.app_context():
+        a = db.session.get(Aufgabe, aufgabe_id)
+        a.kapitel = [db.session.get(TheorieKapitel, kid), db.session.get(TheorieKapitel, eid)]
+        db.session.commit()
+
+    # Lernende: lesen ja (ohne Entwurf), bearbeiten nein
+    seite = c.get(f"/theorie/kapitel/{kid}").get_data(as_text=True)
+    assert "<h3>Prinzip</h3>" in seite and "<b>Fluoreszenz</b>" in seite and f"/theorie/bild/{bild_id}" in seite
+    assert c.get(f"/theorie/bild/{bild_id}").status_code == 200
+    assert c.get(f"/theorie/kapitel/{eid}").status_code == 404
+    assert "Entwurf" not in c.get("/theorie").get_data(as_text=True)
+    assert c.get(f"/lp/theorie/kapitel/{kid}").status_code == 403
+    assert c.post("/lp/theorie/dokument", data={"titel": "x"}).status_code == 403
+
+    # Link beim Übungsblatt und Zeile im PDF
+    with app.app_context():
+        from app.models import BlattAufgabe
+        lea = User.query.filter_by(benutzername="lea").one()
+        blatt = Uebungsblatt(lernende=lea, titel="Theorie-Test")
+        db.session.add(blatt)
+        blatt.aufgaben.append(BlattAufgabe(aufgabe=db.session.get(Aufgabe, aufgabe_id), position=1, seed=1))
+        db.session.add(blatt)
+        db.session.commit()
+        bid = blatt.id
+    seite = c.get(f"/blatt/{bid}").get_data(as_text=True)
+    assert f"/theorie/kapitel/{kid}" in seite and f"/theorie/kapitel/{eid}" not in seite
+    pdf = pdf_text(c.get(f"/blatt/{bid}/aufgaben.pdf").data)
+    assert "Theorie: 3.2 Ct-Wert" in pdf and "Entwurf" not in pdf
+
+    # Kopie behält die Verknüpfung; Löschen entfernt sie
+    lp.post(f"/lp/aufgaben/{aufgabe_id}/duplizieren")
+    with app.app_context():
+        kopie = Aufgabe.query.filter_by(titel=aufgabe_titel + " (Kopie)").one()
+        assert {x.id for x in kopie.kapitel} == {kid, eid}
+    lp.post(f"/lp/theorie/kapitel/{eid}/loeschen")
+    with app.app_context():
+        assert [x.id for x in db.session.get(Aufgabe, aufgabe_id).kapitel] == [kid]
+
+
+def test_theorie_vorschau(app):
+    lp = app.test_client()
+    login(lp, "lp", "lp-demo-2026")
+    r = lp.post("/lp/theorie/vorschau", json={"text": "## Titel\nText [[bild:1]]"}).get_json()
+    assert "<h3>Titel</h3>" in r["aufgabe"] and 'class="platzhalter"' in r["aufgabe"]

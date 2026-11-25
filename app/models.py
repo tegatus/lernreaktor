@@ -6,6 +6,7 @@ Taxonomie:
   Aufgabe ↔ Themen, Leistungsziele, Lernziele
 """
 import json
+import re
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
@@ -174,6 +175,7 @@ class Aufgabe(db.Model):
     lernziele = db.relationship("Lernziel", secondary=aufgabe_lernziel)
     bilder = db.relationship("AufgabeBild", order_by="AufgabeBild.nr", cascade="all, delete-orphan",
                              back_populates="aufgabe")
+    kapitel = db.relationship("TheorieKapitel", secondary="aufgabe_kapitel", back_populates="aufgaben")
 
     def bild_nr(self, nr):
         return next((b for b in self.bilder if b.nr == nr), None)
@@ -216,6 +218,73 @@ class AufgabeBild(db.Model):
     @property
     def breite_anteil(self):
         return BILDGROESSEN.get(self.groesse, BILDGROESSEN["voll"])[1]
+
+
+# ---------------------------------------------------------------- Theorie
+
+aufgabe_kapitel = db.Table(
+    "aufgabe_kapitel",
+    db.Column("aufgabe_id", db.Integer, db.ForeignKey("aufgabe.id"), primary_key=True),
+    db.Column("kapitel_id", db.Integer, db.ForeignKey("theorie_kapitel.id"), primary_key=True),
+)
+kapitel_lernziel = db.Table(
+    "kapitel_lernziel",
+    db.Column("kapitel_id", db.Integer, db.ForeignKey("theorie_kapitel.id"), primary_key=True),
+    db.Column("lernziel_id", db.Integer, db.ForeignKey("lernziel.id"), primary_key=True),
+)
+
+
+def _natuerlich(nummer):
+    """Sortierschlüssel für Kapitelnummern: 2 < 10, 3.2 < 3.10."""
+    return [(0, int(t), "") if t.isdigit() else (1, 0, t.lower()) for t in re.split(r"(\d+)", nummer or "") if t]
+
+
+class TheorieDokument(db.Model):
+    """Ein Theorieteil (z. B. ein Skript) mit Kapiteln."""
+    id = db.Column(db.Integer, primary_key=True)
+    titel = db.Column(db.String(200), nullable=False)
+    beschreibung = db.Column(db.Text, default="")
+    kapitel = db.relationship("TheorieKapitel", back_populates="dokument", cascade="all, delete-orphan")
+
+    @property
+    def kapitel_sortiert(self):
+        return sorted(self.kapitel, key=lambda k: (_natuerlich(k.nummer), k.titel.lower()))
+
+
+class TheorieKapitel(db.Model):
+    """Ein Kapitel Theorie in der Aufgaben-Auszeichnung (Bilder mit [[bild:NR]], Zwischentitel mit «## »)."""
+    id = db.Column(db.Integer, primary_key=True)
+    dokument_id = db.Column(db.Integer, db.ForeignKey("theorie_dokument.id"), nullable=False)
+    dokument = db.relationship("TheorieDokument", back_populates="kapitel")
+    nummer = db.Column(db.String(20), default="")       # z. B. "3.2", bestimmt die Reihenfolge
+    titel = db.Column(db.String(200), nullable=False)
+    text = db.Column(db.Text, nullable=False, default="")
+    sichtbar = db.Column(db.Boolean, default=True, nullable=False)  # False = Entwurf, nur für Lehrpersonen
+    geaendert_am = db.Column(db.DateTime, default=now, onupdate=now)
+    bilder = db.relationship("KapitelBild", order_by="KapitelBild.nr", cascade="all, delete-orphan",
+                             back_populates="kapitel")
+    lernziele = db.relationship("Lernziel", secondary=kapitel_lernziel)
+    aufgaben = db.relationship("Aufgabe", secondary=aufgabe_kapitel, back_populates="kapitel")
+
+    @property
+    def label(self):
+        return f"{self.nummer} {self.titel}".strip()
+
+
+class KapitelBild(db.Model):
+    """Grafik in einem Theoriekapitel (wie AufgabeBild, ohne «nur Lösung»)."""
+    id = db.Column(db.Integer, primary_key=True)
+    kapitel_id = db.Column(db.Integer, db.ForeignKey("theorie_kapitel.id"), nullable=False)
+    kapitel = db.relationship("TheorieKapitel", back_populates="bilder")
+    nr = db.Column(db.Integer, nullable=False)
+    datei = db.Column(db.String(255), nullable=False)
+    groesse = db.Column(db.String(12), default="voll")
+    beschriftung = db.Column(db.String(300), default="")
+    nur_loesung = False
+
+    @property
+    def marker(self):
+        return f"[[bild:{self.nr}]]"
 
 
 def migriere_einzelbilder():

@@ -1,0 +1,93 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf, werkzeugleiste %}
+{% block title %}{{ k.label if k else 'Neues Kapitel' }}{% endblock %}
+{% block content %}
+<h1>{{ 'Kapitel bearbeiten' if k else 'Neues Kapitel' }}</h1>
+{% set sel_lz = k.lernziele|map(attribute='id')|list if k else [] %}
+<form method="post" enctype="multipart/form-data" id="kapitel-form"
+      data-vorschau-url="{{ url_for('theorie.vorschau') }}"
+      data-aufgabe-id="{{ k.id if k else '' }}"
+      data-max-nr="{{ (k.bilder|map(attribute='nr')|max) if k and k.bilder else 0 }}">{{ csrf() }}
+<div class="zweispaltig editor">
+  <div>
+    <div class="kapitel-kopf">
+      <label class="feld">Theorieteil
+        <select name="dokument_id" required>
+          {% for d in dokumente %}<option value="{{ d.id }}" {{ 'selected' if (k and k.dokument_id == d.id) or (not k and vorauswahl_dokument == d.id) }}>{{ d.titel }}</option>{% endfor %}
+        </select></label>
+      <label class="feld">Nummer <input name="nummer" value="{{ k.nummer if k }}" maxlength="20" placeholder="z. B. 3.2"></label>
+    </div>
+    <label class="feld">Titel <input name="titel" value="{{ k.titel if k }}" required maxlength="200"></label>
+    <div class="feld"><span>Text</span>
+      {{ werkzeugleiste('text', teilaufgaben=false) }}
+      <textarea name="text" rows="18" class="ablage">{{ k.text if k }}</textarea></div>
+    <div class="card live-vorschau">
+      <div class="tabs"><span class="tab aktiv" data-ansicht="aufgabe">Vorschau</span><span class="muted vorschau-status"></span></div>
+      <div class="vorschau-inhalt theorie-text" id="vorschau-aufgabe"></div>
+    </div>
+  </div>
+
+  <div>
+    <label class="feld">Sichtbarkeit
+      <select name="sichtbar"><option value="1">für alle sichtbar</option>
+        <option value="0" {{ 'selected' if k and not k.sichtbar }}>Entwurf (nur Lehrpersonen)</option></select></label>
+
+    <h3>Grafiken</h3>
+    {% if k and k.bilder %}
+    <div class="bilderliste">
+      {% for b in k.bilder %}
+      <div class="bildkarte">
+        <img src="{{ url_for('theorie.bild', bild_id=b.id) }}" alt="Bild {{ b.nr }}">
+        <div>
+          <div class="aktionen" style="margin:0 0 .3rem">
+            <strong>Bild {{ b.nr }}</strong>
+            <code class="marker" title="Klicken zum Kopieren">{{ b.marker }}</code>
+            <button type="button" class="link einfuegen" data-marker="{{ b.marker }}" data-ziel="text">einfügen</button>
+          </div>
+          <div class="aktionen" style="margin:0">
+            <select name="bild_{{ b.id }}_groesse" title="Standardgrösse">
+              {% for g, (label, _) in BILDGROESSEN.items() %}<option value="{{ g }}" {{ 'selected' if b.groesse == g }}>{{ label }}</option>{% endfor %}
+            </select>
+            <label><input type="checkbox" name="bild_{{ b.id }}_loeschen" value="1"> löschen</label>
+          </div>
+          <input name="bild_{{ b.id }}_text" value="{{ b.beschriftung }}" placeholder="Bildunterschrift (optional)" style="width:100%; margin-top:.3rem">
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="ablagezone ablage" id="ablagezone">
+      <p style="margin:0 0 .4rem"><strong>Bilder hierher ziehen</strong>, mit <kbd>Ctrl</kbd>+<kbd>V</kbd> in den Text einfügen oder
+        <button type="button" class="link" id="bild-waehlen">Dateien auswählen</button></p>
+      <input type="file" name="bilder_neu" id="bilder-neu" accept="image/*,application/pdf" multiple hidden>
+      <div class="bilderliste" id="neue-bilder"></div>
+      <label class="muted">Grösse neuer Bilder
+        <select name="neu_groesse">{% for g, (label, _) in BILDGROESSEN.items() %}<option value="{{ g }}">{{ label }}</option>{% endfor %}</select></label>
+    </div>
+
+    <h3>Lernziele</h3>
+    <p class="muted">Aufgaben mit denselben Lernzielen schlägt der Aufgaben-Editor für dieses Kapitel vor.</p>
+    {% for t in themen if t.lernziele %}
+      <details {{ 'open' if t.lernziele|selectattr('id', 'in', sel_lz)|list }}>
+        <summary>{{ t.name }} <span class="muted">({{ t.lernziele|length }} Lernziele)</span></summary>
+        <div class="liste">
+        {% for lz in t.lernziele %}
+          <label class="zeile"><input type="checkbox" name="lernziel" value="{{ lz.id }}" {{ 'checked' if lz.id in sel_lz }}>
+            <span class="code">{{ lz.kuerzel }}</span> {{ lz.text }}</label>
+        {% endfor %}
+        </div>
+      </details>
+    {% else %}<p class="muted">Noch keine Lernziele erfasst.</p>{% endfor %}
+  </div>
+</div>
+<div class="aktionen speicherleiste">
+  <button class="btn" name="weiter" value="liste">Speichern</button>
+  <button class="btn sek" name="weiter" value="ansehen">Speichern &amp; ansehen</button>
+  <a href="{{ url_for('theorie.index') }}">Abbrechen</a>
+</div>
+</form>
+{% if k %}
+<form method="post" action="{{ url_for('theorie.kapitel_loeschen', kapitel_id=k.id) }}" data-bestaetigen="Kapitel löschen? Verknüpfungen mit Aufgaben gehen verloren.">{{ csrf() }}
+  <button class="link">Kapitel löschen</button></form>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='editor.js') }}"></script>{% endblock %}

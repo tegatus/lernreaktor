@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf %}
+{% block title %}Theorie{% endblock %}
+{% block content %}
+<h1>Theorie</h1>
+<p class="muted">{% if current_user.ist_lp %}Theorieteile und Kapitel zum Nachschlagen. Kapitel lassen sich im Aufgaben-Editor mit Aufgaben verknüpfen; Lernende sehen die Links bei ihren Übungsblättern.{% else %}Hier kannst du nachlesen, was du für die Aufgaben brauchst.{% endif %}</p>
+
+{% for d, sichtbare in dokumente %}
+  {% if sichtbare or current_user.ist_lp %}
+  <section class="card theorie-dok" id="dok-{{ d.id }}">
+    <h2 style="margin-top:0">{{ d.titel }}</h2>
+    {% if d.beschreibung %}<p class="muted">{{ d.beschreibung }}</p>{% endif %}
+    <ol class="kapitelliste">
+      {% for k in sichtbare %}
+      <li><a href="{{ url_for('theorie.kapitel', kapitel_id=k.id) }}"><span class="code">{{ k.nummer }}</span> {{ k.titel }}</a>
+        {% if not k.sichtbar %}<span class="badge">Entwurf</span>{% endif %}
+        {% if current_user.ist_lp %}<span class="muted"> · {{ k.aufgaben|length }} Aufgabe(n)</span>
+          · <a href="{{ url_for('theorie.kapitel_bearbeiten', kapitel_id=k.id) }}">bearbeiten</a>{% endif %}</li>
+      {% else %}<li class="muted">Noch keine Kapitel.</li>{% endfor %}
+    </ol>
+    {% if current_user.ist_lp %}
+    <div class="aktionen">
+      <a class="btn klein" href="{{ url_for('theorie.kapitel_bearbeiten', dokument=d.id) }}">Neues Kapitel</a>
+      <details class="inline-bearbeiten"><summary class="link">Theorieteil umbenennen</summary>
+        <form method="post" action="{{ url_for('theorie.dokument_speichern', dokument_id=d.id) }}">{{ csrf() }}
+          <label class="feld">Titel <input name="titel" value="{{ d.titel }}" required></label>
+          <label class="feld">Beschreibung <input name="beschreibung" value="{{ d.beschreibung }}"></label>
+          <button class="btn sek klein">Speichern</button></form>
+        {% if not d.kapitel %}<form method="post" action="{{ url_for('theorie.dokument_loeschen', dokument_id=d.id) }}" data-bestaetigen="Theorieteil löschen?">{{ csrf() }}
+          <button class="link">Theorieteil löschen</button></form>{% endif %}
+      </details>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+{% else %}
+  <p class="muted">Noch keine Theorie erfasst.</p>
+{% endfor %}
+
+{% if current_user.ist_lp %}
+<form method="post" action="{{ url_for('theorie.dokument_speichern') }}" class="card">{{ csrf() }}
+  <h3 style="margin-top:0">Neuer Theorieteil</h3>
+  <label class="feld">Titel <input name="titel" required placeholder="z. B. Skript Molekularbiologie 1"></label>
+  <label class="feld">Beschreibung (optional) <input name="beschreibung"></label>
+  <button class="btn">Anlegen</button>
+</form>
+{% endif %}
+{% endblock %}

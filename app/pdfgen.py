@@ -376,6 +376,9 @@ def _aufgaben_kopf(st, nr, aufgabe, zusatz_meta=True):
             teile.append("Lernziele: " + ", ".join(l.label for l in aufgabe.lernziele))
         elif aufgabe.leistungsziele:
             teile.append("BiVo: " + ", ".join(l.code for l in aufgabe.leistungsziele))
+        kapitel = [k for k in aufgabe.kapitel if k.sichtbar]
+        if kapitel:
+            teile.append("Theorie: " + ", ".join(k.label for k in kapitel))
         if teile:
             out.append(Paragraph(html.escape(" · ".join(teile)), st["meta"]))
             out.append(Spacer(1, 3))

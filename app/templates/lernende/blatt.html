@@ -9,7 +9,9 @@
     <h3>1 · Ausdrucken &amp; lösen</h3>
     <p>{{ blatt.aufgaben|length }} Aufgaben, total {{ blatt.max_punkte|pkt }} Punkte.</p>
     <a class="btn" href="{{ url_for('lernende.blatt_pdf', blatt_id=blatt.id, art='aufgaben') }}" target="_blank">Übungsblatt (PDF) öffnen</a>
-    <ol class="muted">{% for ba in blatt.aufgaben %}<li>{{ ba.aufgabe.titel }} ({{ ba.aufgabe.punkte|pkt }} P.)</li>{% endfor %}</ol>
+    <ol class="muted">{% for ba in blatt.aufgaben %}<li>{{ ba.aufgabe.titel }} ({{ ba.aufgabe.punkte|pkt }} P.)
+      {% set kap = ba.aufgabe.kapitel|selectattr('sichtbar')|list %}
+      {% if kap %}<div class="theorie-links">Theorie:{% for k in kap %} <a href="{{ url_for('theorie.kapitel', kapitel_id=k.id) }}">{{ k.label }}</a>{% endfor %}</div>{% endif %}</li>{% endfor %}</ol>
   </div>
   <div class="card">
     <h3>2 · Fotos hochladen</h3>

@@ -59,10 +59,11 @@ def create_app(config=None):
     def _pkt(p):
         return "–" if p is None else f"{p:g}"
 
-    from . import auth, lernende, lp
+    from . import auth, lernende, lp, theorie
     app.register_blueprint(auth.bp)
     app.register_blueprint(lernende.bp)
     app.register_blueprint(lp.bp)
+    app.register_blueprint(theorie.bp)
 
     from .seed import register_cli
     register_cli(app)

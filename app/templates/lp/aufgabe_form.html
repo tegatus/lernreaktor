@@ -1,27 +1,5 @@
-{% extends "base.html" %}{% from "_macros.html" import csrf, auswahl %}
+{% extends "base.html" %}{% from "_macros.html" import csrf, auswahl, werkzeugleiste %}
 {% block title %}{{ aufgabe.titel if aufgabe else 'Neue Aufgabe' }}{% endblock %}
-
-{% macro werkzeugleiste(ziel) %}
-<div class="editor-leiste" data-ziel="{{ ziel }}">
-  <button type="button" data-aktion="fett" title="Fett (Ctrl+B)"><b>B</b></button>
-  <button type="button" data-aktion="kursiv" title="Kursiv (Ctrl+I)"><i>I</i></button>
-  <button type="button" data-aktion="tief" title="Tiefgestellt, z. B. H₂O">x₂</button>
-  <button type="button" data-aktion="hoch" title="Hochgestellt, z. B. 10⁶">x²</button>
-  <button type="button" data-aktion="formel" title="Chemische Formel: markierten Text umwandeln (H2SO4 → H₂SO₄, Ca2+ → Ca²⁺)">⚗ Formel</button>
-  <span class="trenner"></span>
-  <button type="button" data-aktion="liste" title="Aufzählung">• Liste</button>
-  <button type="button" data-aktion="teil" title="Teilaufgaben a), b), …">a) b)</button>
-  <button type="button" data-aktion="tabelle" title="Tabelle einfügen">▦ Tabelle</button>
-  <button type="button" data-aktion="bild" title="Bild einfügen (oder Screenshot mit Ctrl+V einfügen / Bild hierher ziehen)">🖼 Bild</button>
-  <span class="trenner"></span>
-  <details class="symbole">
-    <summary title="Sonderzeichen">Ω Zeichen</summary>
-    <div>
-      {% for z in "µ ° × · ± ≈ ≙ ≠ ≤ ≥ → ⇌ ↑ ↓ Δ α β γ λ π σ Σ √ ‰ ½ ¹ ² ³ ⁺ ⁻ ₀ ₁ ₂ ₃ ₄ Å ℃ Ω ∞".split() %}<button type="button" data-zeichen="{{ z }}">{{ z }}</button>{% endfor %}
-    </div>
-  </details>
-</div>
-{% endmacro %}
 
 {% block content %}
 <h1>{{ 'Aufgabe #%d bearbeiten'|format(aufgabe.id) if aufgabe else 'Neue Aufgabe' }}</h1>
@@ -177,6 +155,24 @@
                aufgabe.lernziele|map(attribute='id')|list if aufgabe else vorauswahl.lernziele,
                aufgabe.leistungsziele|map(attribute='code')|list if aufgabe else [], zeige_k=false) }}
     <label class="feld">Neues Thema anlegen (optional) <input name="neues_thema" placeholder="z. B. Gelelektrophorese"></label>
+
+    <h3>Theorie zum Nachschlagen</h3>
+    {% set sel_kap = aufgabe.kapitel|map(attribute='id')|list if aufgabe else [] %}
+    {% if theorie %}
+      <p class="muted">Lernende sehen die gewählten Kapitel beim Übungsblatt. ★ = teilt ein Lernziel mit dieser Aufgabe.</p>
+      {% for d in theorie if d.kapitel %}
+        <details {{ 'open' if d.kapitel|selectattr('id', 'in', sel_kap)|list or d.kapitel|selectattr('id', 'in', kapitel_vorschlaege)|list }}>
+          <summary>{{ d.titel }} <span class="muted">({{ d.kapitel|length }} Kapitel)</span></summary>
+          <div class="liste">
+          {% for kap in d.kapitel_sortiert %}
+            <label class="zeile"><input type="checkbox" name="kapitel" value="{{ kap.id }}" {{ 'checked' if kap.id in sel_kap }}>
+              {% if kap.id in kapitel_vorschlaege %}<span title="teilt ein Lernziel mit dieser Aufgabe">★</span>{% endif %}
+              <span class="code">{{ kap.nummer }}</span> {{ kap.titel }}{% if not kap.sichtbar %} <span class="badge">Entwurf</span>{% endif %}</label>
+          {% endfor %}
+          </div>
+        </details>
+      {% endfor %}
+    {% else %}<p class="muted">Noch keine Theorie erfasst – <a href="{{ url_for('theorie.index') }}">Theorie anlegen</a>.</p>{% endif %}
   </div>
 </div>
 <div class="aktionen speicherleiste">

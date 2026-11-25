@@ -1,6 +1,6 @@
-// Aufgaben-Editor: Werkzeugleiste, Formel-Assistent, Bilder einfügen/ziehen, Live-Vorschau
+// Editor für Aufgaben und Theoriekapitel: Werkzeugleiste, Formel-Assistent, Bilder einfügen/ziehen, Live-Vorschau
 (() => {
-  const form = document.getElementById('aufgabe-form');
+  const form = document.getElementById('aufgabe-form') || document.getElementById('kapitel-form');
   if (!form) return;
   const feld = name => form.querySelector(`textarea[name=${name}]`);
 
@@ -74,6 +74,7 @@
         }
         case 'liste': return jedeZeile(ta, z => z.startsWith('- ') ? z : '- ' + z);
         case 'teil': { let i = 0; return jedeZeile(ta, z => /^[a-z]\)\s/.test(z) ? z : `${String.fromCharCode(97 + i++)}) ${z}`); }
+        case 'titel': return jedeZeile(ta, z => z.startsWith('## ') ? z : '## ' + z);
         case 'tabelle': return zeilenEinfuegen(ta, '| Probe | Wert | Einheit |\n| A | | |\n| B | | |');
         case 'bild': zielFeld = ta; return dateiwahl.click();
       }
@@ -144,7 +145,7 @@
           <code class="marker">[[bild:${nrVon(i)}]]</code></div>
           <div class="aktionen" style="margin:0">
             <button type="button" class="link einfuegen" data-marker="[[bild:${nrVon(i)}]]" data-ziel="text">in Aufgabe einfügen</button>
-            <button type="button" class="link einfuegen" data-marker="[[bild:${nrVon(i)}]]" data-ziel="loesung">in Lösung einfügen</button>
+            ${feld('loesung') ? `<button type="button" class="link einfuegen" data-marker="[[bild:${nrVon(i)}]]" data-ziel="loesung">in Lösung einfügen</button>` : ''}
             <button type="button" class="link entfernen">entfernen</button></div></div>`;
       karte.querySelector('.entfernen').addEventListener('click', () => entfernen(i));
       liste.appendChild(karte);
@@ -172,7 +173,7 @@
   const ziele = { aufgabe: document.getElementById('vorschau-aufgabe'), loesung: document.getElementById('vorschau-loesung') };
   form.querySelectorAll('.live-vorschau .tab').forEach(t => t.addEventListener('click', () => {
     form.querySelectorAll('.live-vorschau .tab').forEach(x => x.classList.toggle('aktiv', x === t));
-    Object.entries(ziele).forEach(([k, el]) => { el.style.display = k === t.dataset.ansicht ? '' : 'none'; });
+    Object.entries(ziele).forEach(([k, el]) => { if (el) el.style.display = k === t.dataset.ansicht ? '' : 'none'; });
   }));
   let timer, laufend = 0;
   function vorschauSpaeter() { clearTimeout(timer); timer = setTimeout(vorschau, 350); }
@@ -180,7 +181,7 @@
     const nr = ++laufend;
     status.textContent = 'aktualisiere …';
     try {
-      const daten = { aufgabe_id: form.dataset.aufgabeId, text: feld('text').value, loesung: feld('loesung').value,
+      const daten = { aufgabe_id: form.dataset.aufgabeId, text: feld('text').value, loesung: feld('loesung')?.value ?? '',
                       ...(window.aufgabeTypDaten ? window.aufgabeTypDaten() : {}) };
       const r = await fetch(form.dataset.vorschauUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.CSRF }, body: JSON.stringify(daten) });
@@ -188,7 +189,7 @@
       const res = await r.json();
       if (nr !== laufend) return;     // veraltete Antwort
       ziele.aufgabe.innerHTML = res.aufgabe || '<p class="muted">(leer)</p>';
-      ziele.loesung.innerHTML = res.loesung || '<p class="muted">(keine Musterlösung)</p>';
+      if (ziele.loesung) ziele.loesung.innerHTML = res.loesung || '<p class="muted">(keine Musterlösung)</p>';
       // Platzhalter für noch nicht gespeicherte Bilder durch die lokale Datei ersetzen
       form.querySelectorAll('.live-vorschau figure.platzhalter').forEach(f => {
         const n = neu[+f.dataset.nr - maxNr - 1];

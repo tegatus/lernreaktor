@@ -76,8 +76,10 @@ def _bilder_html(treffer, bilder, bild_url):
     return f'<div class="bildzeile">{"".join(teile)}</div>' if teile else ""
 
 
-def markup_html(text, bilder=None, bild_url=None, anhaengen=()):
-    """bilder: {nr: AufgabeBild} (sichtbare Bilder), bild_url: Funktion AufgabeBild -> URL."""
+def markup_html(text, bilder=None, bild_url=None, anhaengen=(), zwischentitel=False):
+    """bilder: {nr: AufgabeBild} (sichtbare Bilder), bild_url: Funktion AufgabeBild -> URL.
+
+    zwischentitel=True (Theorie): Zeilen mit «## Titel» werden zu Zwischentiteln."""
     bilder = bilder or {}
     out = []
     for block in re.split(r"\n\s*\n", tabellen_abtrennen(text).strip()):
@@ -93,6 +95,12 @@ def markup_html(text, bilder=None, bild_url=None, anhaengen=()):
             continue
         teile, liste = [], []
         for l in lines:
+            if zwischentitel and l.startswith("## "):
+                if liste:
+                    teile.append("<ul>" + "".join(liste) + "</ul>")
+                    liste = []
+                teile.append(f"<h3>{_inline(l[3:].strip())}</h3>")
+                continue
             treffer = [(int(m[1]), (m[2] or "").lower() or None) for m in RE_BILD.finditer(l)]
             if treffer:
                 l = RE_BILD.sub("", l).strip()

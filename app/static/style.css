@@ -262,6 +262,7 @@ table.kompakt input:not([type=checkbox]) { width: 100%; padding: .3rem .45rem; }
 
 /* Kamera-Upload (Übungsblatt) */
 .kamera { display: grid; gap: .6rem; justify-items: start; }
+.kamera [hidden] { display: none !important; }
 .kamera-knopf { cursor: pointer; }
 .kamera-seiten { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; width: 100%; }
 .kamera-seiten:empty { display: none; }
@@ -299,3 +300,14 @@ table.kompakt input:not([type=checkbox]) { width: 100%; padding: .3rem .45rem; }
 .chips .niv { min-width: 3.2rem; }
 .chips .niv { gap: .35rem; font-weight: 500; }
 .chips .niv b { font-weight: 700; }
+
+/* Theorie */
+.kapitelliste { margin: .3rem 0 .6rem; padding-left: 1.2rem; display: grid; gap: .3rem; }
+.kapitelliste a { text-decoration: none; } .kapitelliste a:hover { text-decoration: underline; }
+.theorie-text { font-size: 1.02rem; line-height: 1.6; max-width: 48rem; }
+.theorie-text h3 { font-family: var(--serif); margin: 1.1rem 0 .4rem; }
+.theorie-text .absatz { margin-bottom: .8rem; }
+.kapitel-kopf { display: grid; grid-template-columns: 1fr 8rem; gap: .6rem; }
+.kapitel-blaettern { justify-content: space-between; margin-top: 1rem; }
+.inline-bearbeiten summary { display: inline; }
+.theorie-links { display: flex; flex-wrap: wrap; gap: .2rem .6rem; font-size: .85rem; }

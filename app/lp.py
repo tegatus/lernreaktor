@@ -18,7 +18,8 @@ from .markup import bild_warnungen
 from .auth import lp_required
 from .lernende import auswahl_aus_request, bild_pfad, blatt_pdf_rel
 from .models import (ANTWORTFORMATE, BILDGROESSEN, VERWENDUNGEN, Aufgabe, AufgabeBild, AbgabeSeite, Bereich, Klasse, Leistungsziel,
-                     Lernziel, NIVEAUS, Pruefung, PruefungAufgabe, Thema, Uebungsblatt, User, db, niveau_aus_punkten,
+                     Lernziel, NIVEAUS, Pruefung, PruefungAufgabe, Thema, TheorieDokument, TheorieKapitel, Uebungsblatt,
+                     User, db, niveau_aus_punkten,
                      now)
 from .selection import (geuebte_aufgaben_der_klasse, stelle_pruefung_zusammen, ziele_beschreiben)
 
@@ -283,8 +284,12 @@ def _formular_kontext(aufgabe):
                   "themen": [int(x) for x in request.args.getlist("thema") if x.isdigit()]}
     if vorauswahl["lernziele"] and not vorauswahl["themen"]:
         vorauswahl["themen"] = sorted({lz.thema_id for lz in Lernziel.query.filter(Lernziel.id.in_(vorauswahl["lernziele"]))})
+    from .theorie import vorgeschlagene_kapitel
+    lz_ids = [lz.id for lz in aufgabe.lernziele] if aufgabe else vorauswahl["lernziele"]
     return dict(aufgabe=aufgabe, themen=Thema.query.order_by(Thema.name).all(),
-                bereiche=Bereich.query.order_by(Bereich.code).all(), vorauswahl=vorauswahl, ki_aktiv=ki_aktiv())
+                bereiche=Bereich.query.order_by(Bereich.code).all(), vorauswahl=vorauswahl, ki_aktiv=ki_aktiv(),
+                theorie=TheorieDokument.query.order_by(TheorieDokument.titel).all(),
+                kapitel_vorschlaege=vorgeschlagene_kapitel(lz_ids))
 
 
 @bp.route("/aufgaben/neu", methods=["GET", "POST"])
@@ -324,6 +329,8 @@ def aufgabe_bearbeiten(aufgabe_id=None):
         for lz in a.lernziele:  # Lernziele bringen ihre BiVo-Leistungsziele automatisch mit
             codes |= {l.code for l in lz.leistungsziele}
         a.leistungsziele = Leistungsziel.query.filter(Leistungsziel.code.in_(codes)).all()
+        a.kapitel = TheorieKapitel.query.filter(
+            TheorieKapitel.id.in_([int(x) for x in f.getlist("kapitel") if x.isdigit()])).all()
         vorlage = db.session.get(Aufgabe, f.get("bilder_von", type=int) or 0) if not a.id else None
         if vorlage:  # Variante als neue Aufgabe: Grafiken der Ausgangsaufgabe übernehmen
             a.bilder = [AufgabeBild(nr=b.nr, datei=b.datei, groesse=b.groesse, nur_loesung=b.nur_loesung,
@@ -340,8 +347,11 @@ def aufgabe_bearbeiten(aufgabe_id=None):
     return render_template("lp/aufgabe_form.html", **_formular_kontext(a))
 
 
-def _bilder_speichern(a, f, neue_dateien):
-    """Bestehende Bilder aktualisieren/löschen, neue Bilder anhängen (Nummern bleiben stabil)."""
+def _bilder_speichern(a, f, neue_dateien, bild_klasse=AufgabeBild, ordner="aufgabenbilder"):
+    """Bestehende Bilder aktualisieren/löschen, neue Bilder anhängen (Nummern bleiben stabil).
+
+    Für Aufgaben (AufgabeBild) und Theoriekapitel (KapitelBild – ohne «nur in der Lösung»)."""
+    mit_loesung = bild_klasse is AufgabeBild
     naechste = max([b.nr for b in a.bilder] + [0]) + 1  # vor dem Löschen: vorhergesagte Nummern im Editor bleiben gültig
     for b in list(a.bilder):
         if f.get(f"bild_{b.id}_loeschen") == "1":
@@ -349,7 +359,8 @@ def _bilder_speichern(a, f, neue_dateien):
             continue
         g = f.get(f"bild_{b.id}_groesse")
         b.groesse = g if g in BILDGROESSEN else b.groesse
-        b.nur_loesung = f.get(f"bild_{b.id}_loesung") == "1"
+        if mit_loesung:
+            b.nur_loesung = f.get(f"bild_{b.id}_loesung") == "1"
         b.beschriftung = f.get(f"bild_{b.id}_text", "").strip()[:300]
     groesse = f.get("neu_groesse") if f.get("neu_groesse") in BILDGROESSEN else "voll"
     for datei in neue_dateien:
@@ -360,8 +371,8 @@ def _bilder_speichern(a, f, neue_dateien):
         except ValueError as e:
             flash(str(e), "fehler")
             continue
-        a.bilder.append(AufgabeBild(nr=naechste, datei=storage.speichere_bild(im, "aufgabenbilder"),
-                                    groesse=groesse, nur_loesung=f.get("neu_loesung") == "1"))
+        extra = {"nur_loesung": f.get("neu_loesung") == "1"} if mit_loesung else {}
+        a.bilder.append(bild_klasse(nr=naechste, datei=storage.speichere_bild(im, ordner), groesse=groesse, **extra))
         naechste += 1
 
 
@@ -413,6 +424,7 @@ def aufgabe_duplizieren(aufgabe_id):
                                 beschriftung=b.beschriftung) for b in a.bilder]
     kopie.titel = (a.titel + " (Kopie)")[:200]
     kopie.themen, kopie.lernziele, kopie.leistungsziele = list(a.themen), list(a.lernziele), list(a.leistungsziele)
+    kopie.kapitel = list(a.kapitel)
     db.session.add(kopie)
     db.session.commit()
     flash("Kopie erstellt – jetzt anpassen (z. B. andere Zahlenwerte).", "ok")
