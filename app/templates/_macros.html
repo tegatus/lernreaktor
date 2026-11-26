@@ -9,6 +9,26 @@
   Auswahl-Widget: Themen, konkrete Lernziele (gruppiert nach Thema), BiVo-Leistungsziele (gruppiert nach
   Bereich / Handlungskompetenz) und K-Stufen. sel_* sind Mengen bereits gewählter Werte (für Formulare).
 #}
+{% macro bivo_liste(bereiche, sel_bivo=[]) %}
+    {% for b in bereiche %}
+      <details {{ 'open' if b.code in sel_bivo|map('first')|list }}>
+        <summary><span class="code">{{ b.code }}</span> {{ b.titel }}</summary>
+        {% for hk in b.handlungskompetenzen %}
+          <div class="hk">
+            <div class="hk-titel"><span class="code">{{ hk.code }}</span> {{ hk.titel }}
+              <button type="button" class="link alle" data-scope="hk-{{ hk.code|replace('.', '-') }}">alle</button></div>
+            <div class="liste" id="hk-{{ hk.code|replace('.', '-') }}">
+            {% for l in hk.leistungsziele %}
+              <label class="zeile"><input type="checkbox" name="bivo" value="{{ l.code }}" {{ 'checked' if l.code in sel_bivo }}>
+                <span class="code">{{ l.code }}</span> {{ l.text }} <span class="muted">K{{ l.k_stufe }}</span></label>
+            {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </details>
+    {% endfor %}
+{% endmacro %}
+
 {% macro auswahl(themen, bereiche, sel_themen=[], sel_lernziele=[], sel_bivo=[], sel_k=[], zeige_k=true, offen=false) %}
 <div class="auswahl">
   <div class="tabs" role="tablist">
@@ -43,23 +63,7 @@
   </div>
 
   <div class="tabpanel" id="t-bivo">
-    {% for b in bereiche %}
-      <details {{ 'open' if b.code in sel_bivo|map('first')|list }}>
-        <summary><span class="code">{{ b.code }}</span> {{ b.titel }}</summary>
-        {% for hk in b.handlungskompetenzen %}
-          <div class="hk">
-            <div class="hk-titel"><span class="code">{{ hk.code }}</span> {{ hk.titel }}
-              <button type="button" class="link alle" data-scope="hk-{{ hk.code|replace('.', '-') }}">alle</button></div>
-            <div class="liste" id="hk-{{ hk.code|replace('.', '-') }}">
-            {% for l in hk.leistungsziele %}
-              <label class="zeile"><input type="checkbox" name="bivo" value="{{ l.code }}" {{ 'checked' if l.code in sel_bivo }}>
-                <span class="code">{{ l.code }}</span> {{ l.text }} <span class="muted">K{{ l.k_stufe }}</span></label>
-            {% endfor %}
-            </div>
-          </div>
-        {% endfor %}
-      </details>
-    {% endfor %}
+    {{ bivo_liste(bereiche, sel_bivo) }}
   </div>
 
   {% if zeige_k %}

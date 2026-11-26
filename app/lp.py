@@ -497,6 +497,79 @@ def lernziele_import():
     return render_template("lp/lernziele_import.html", vorschau=None, thema="", text="")
 
 
+@bp.route("/lernziele/neu", methods=["GET", "POST"])
+@bp.route("/lernziele/<int:lz_id>", methods=["GET", "POST"])
+@lp_required
+def lernziel_bearbeiten(lz_id=None):
+    """Einzelnes Lernziel anlegen, bearbeiten oder löschen – mit mindestens einem BiVo-Kompetenzziel."""
+    from .lernziele import kompetenzziele_setzen, lernziel_loeschen, naechste_nummer
+    lz = db.get_or_404(Lernziel, lz_id) if lz_id else None
+    themen = Thema.query.order_by(Thema.name).all()
+    bereiche = Bereich.query.order_by(Bereich.code).all()
+
+    def formular(werte):
+        return render_template("lp/lernziel_form.html", lz=lz, w=werte, themen=themen, bereiche=bereiche)
+
+    if request.method == "GET":
+        if lz:
+            w = dict(thema=lz.thema_id, bereich=lz.bereich, nummer=lz.nummer, text=lz.text, k_stufe=lz.k_stufe,
+                     bivo=[l.code for l in lz.leistungsziele])
+        else:
+            w = dict(thema=request.args.get("thema", type=int), bereich="", nummer="", text="", k_stufe=None, bivo=[])
+        return formular(w)
+
+    f = request.form
+    if lz and f.get("loeschen") == "1":
+        verwendet = lernziel_loeschen(lz)
+        if verwendet:
+            flash("Lernziel wird noch verwendet von: " + ", ".join(a.titel for a in verwendet), "fehler")
+            return redirect(url_for(".lernziel_bearbeiten", lz_id=lz.id))
+        db.session.commit()
+        flash("Lernziel gelöscht.", "ok")
+        return redirect(url_for(".lernziele"))
+
+    w = dict(thema=f.get("thema", type=int), bereich=f.get("bereich", "").strip().lower(),
+             nummer=f.get("nummer", "").strip(), text=f.get("text", "").strip(),
+             k_stufe=f.get("k_stufe", type=int), bivo=f.getlist("bivo"))
+    bekannt = {l.code for l in Leistungsziel.query.filter(Leistungsziel.code.in_(w["bivo"]))}
+    gueltig = [c for c in dict.fromkeys(w["bivo"]) if c in bekannt]  # Reihenfolge der Auswahl bleibt erhalten
+    thema = db.session.get(Thema, w["thema"] or 0)
+    fehler = None
+    if not thema:
+        fehler = "Bitte ein Thema wählen."
+    elif not w["text"]:
+        fehler = "Bitte den Text des Lernziels angeben."
+    elif not gueltig:
+        fehler = "Bitte mindestens ein BiVo-Kompetenzziel wählen."
+    elif w["k_stufe"] is not None and not 1 <= w["k_stufe"] <= 6:
+        fehler = "K-Stufe muss zwischen 1 und 6 liegen."
+    else:
+        w["bereich"] = w["bereich"][:4] or gueltig[0].split(".")[0]
+        if not w["nummer"]:
+            w["nummer"] = naechste_nummer(thema.id, w["bereich"])
+        elif not w["nummer"].isdigit() or int(w["nummer"]) < 1:
+            fehler = "Die Nummer muss eine positive ganze Zahl sein."
+    if not fehler:
+        w["nummer"] = int(w["nummer"])
+        doppelt = Lernziel.query.filter(Lernziel.thema_id == thema.id, Lernziel.bereich == w["bereich"],
+                                        Lernziel.nummer == w["nummer"], Lernziel.id != (lz.id if lz else -1)).first()
+        if doppelt:
+            fehler = f"Lernziel {thema.name} {doppelt.kuerzel} existiert bereits."
+    if fehler:
+        flash(fehler, "fehler")
+        return formular(w)
+
+    if not lz:
+        lz = Lernziel()
+        db.session.add(lz)
+    lz.thema, lz.bereich, lz.nummer, lz.text, lz.k_stufe = thema, w["bereich"], w["nummer"], w["text"], w["k_stufe"]
+    db.session.flush()
+    n = kompetenzziele_setzen(lz, gueltig)
+    db.session.commit()
+    flash(f"Lernziel {lz.label} gespeichert." + (f" {n} Aufgabe{'' if n == 1 else 'n'} angepasst." if n else ""), "ok")
+    return redirect(url_for(".lernziele"))
+
+
 @bp.route("/themen/<int:thema_id>", methods=["POST"])
 @lp_required
 def thema_bearbeiten(thema_id):

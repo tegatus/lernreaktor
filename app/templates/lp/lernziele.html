@@ -3,7 +3,8 @@
 {% block content %}
 <div class="aktionen" style="justify-content: space-between">
   <h1>Themen &amp; konkrete Lernziele</h1>
-  <a class="btn" href="{{ url_for('lp.lernziele_import') }}">Lernziele importieren</a>
+  <span><a class="btn sek" href="{{ url_for('lp.lernziel_bearbeiten') }}">+ Lernziel</a>
+    <a class="btn" href="{{ url_for('lp.lernziele_import') }}">Lernziele importieren</a></span>
 </div>
 <p class="muted">Die Zahlen zeigen, wie viele aktive Aufgaben ein Lernziel abdecken (Übung / Prüfung).
   <span class="luecke">Rot</span> = noch keine Aufgabe vorhanden.</p>
@@ -16,14 +17,16 @@
     {% for lz in t.lernziele %}
     {% set u, p = zaehler[(lz.id, 'u')], zaehler[(lz.id, 'p')] %}
     <tr><td><span class="code">{{ lz.kuerzel }}</span></td><td>{{ lz.text }}</td>
-        <td>{% for l in lz.leistungsziele %}<span class="code" title="{{ l.text }}">{{ l.code }}</span>{% endfor %}</td>
+        <td>{% for l in lz.leistungsziele %}<span class="code" title="{{ l.text }}">{{ l.code }}</span>{% else %}<span class="luecke">kein BiVo-Ziel</span>{% endfor %}</td>
         <td>K{{ lz.k_stufe }}</td>
         <td class="{{ 'luecke' if not u }}">{{ u }}</td><td class="{{ 'luecke' if not p }}">{{ p }}</td>
-        <td><a href="{{ url_for('lp.aufgabe_bearbeiten', lernziel=lz.id) }}" class="btn klein sek"
+        <td><a href="{{ url_for('lp.lernziel_bearbeiten', lz_id=lz.id) }}" class="btn klein sek">Bearbeiten</a>
+            <a href="{{ url_for('lp.aufgabe_bearbeiten', lernziel=lz.id) }}" class="btn klein sek"
                title="Neue Aufgabe zu diesem Lernziel{{ ' – mit KI-Entwurf' if ki_aktiv }}">+ Aufgabe</a></td></tr>
     {% endfor %}
   </table>
   {% endif %}
+  <p><a class="btn klein" href="{{ url_for('lp.lernziel_bearbeiten', thema=t.id) }}">+ Lernziel</a></p>
   <form method="post" action="{{ url_for('lp.thema_bearbeiten', thema_id=t.id) }}" class="aktionen">{{ csrf() }}
     <input name="name" value="{{ t.name }}"> <input name="beschreibung" value="{{ t.beschreibung }}" placeholder="Beschreibung" size="40">
     <button class="btn klein sek">Umbenennen</button>

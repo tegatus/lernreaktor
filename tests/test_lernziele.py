@@ -106,3 +106,109 @@ def test_loeschen_entfernt_kapitelverknuepfung(app):
         db.session.commit()
         assert db.session.get(Lernziel, lz_id) is None
         assert db.session.get(TheorieKapitel, k_id).lernziele == []
+
+
+# ---------------------------------------------------------------- Formular
+
+def _formular(**werte):
+    d = {"thema": "", "bereich": "", "nummer": "", "text": "", "k_stufe": "", "bivo": []}
+    d.update(werte)
+    return d
+
+
+def test_lernziel_anlegen_mit_kompetenzziel(lp, app):
+    with app.app_context():
+        q_id, anzahl = _qpcr().id, Lernziel.query.count()
+        erwartet = naechste_nummer(q_id, "b")
+    r = lp.post("/lp/lernziele/neu", data=_formular(thema=q_id, text="Ich kann X.", bivo=["b.5.3", "a.1.1"]))
+    assert r.status_code == 302 and r.headers["Location"].endswith("/lp/lernziele")
+    with app.app_context():
+        assert Lernziel.query.count() == anzahl + 1
+        lz = Lernziel.query.filter_by(text="Ich kann X.").one()
+        assert (lz.bereich, lz.nummer, lz.thema_id) == ("b", erwartet, q_id)
+        assert _codes(lz) == {"b.5.3", "a.1.1"}
+
+
+def test_lernziel_formular_zeigt_kompetenzziele(lp, app):
+    with app.app_context():
+        q_id = _qpcr().id
+    html = lp.get(f"/lp/lernziele/neu?thema={q_id}").get_data(as_text=True)
+    assert 'name="bivo" value="a.1.1"' in html and f'value="{q_id}" selected' in html
+
+
+def test_lernziel_ohne_kompetenzziel_abgelehnt(lp, app):
+    with app.app_context():
+        q_id, anzahl = _qpcr().id, Lernziel.query.count()
+    r = lp.post("/lp/lernziele/neu", data=_formular(thema=q_id, text="Ich kann Y."))
+    assert r.status_code == 200 and "mindestens ein" in r.get_data(as_text=True)
+    with app.app_context():
+        assert Lernziel.query.count() == anzahl
+
+
+def test_lernziel_nur_unbekannte_codes_abgelehnt(lp, app):
+    with app.app_context():
+        q_id, anzahl = _qpcr().id, Lernziel.query.count()
+    r = lp.post("/lp/lernziele/neu", data=_formular(thema=q_id, text="Ich kann Y.", bivo=["x.9.9"]))
+    assert r.status_code == 200 and "mindestens ein" in r.get_data(as_text=True)
+    with app.app_context():
+        assert Lernziel.query.count() == anzahl
+
+
+def test_lernziel_bearbeiten_fuehrt_aufgaben_nach(lp, app):
+    with app.app_context():
+        lz = _neues_lz(1, "a.1.1")
+        a = _aufgabe([lz], ["a.1.1"])
+        lz_id, a_id, q_id = lz.id, a.id, _qpcr().id
+    r = lp.post(f"/lp/lernziele/{lz_id}", data=_formular(thema=q_id, bereich="z", nummer="1", text="Neu",
+                                                        bivo=["a.1.1", "a.1.2"]), follow_redirects=True)
+    assert "1 Aufgabe angepasst" in r.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Lernziel, lz_id).text == "Neu"
+        assert _codes(db.session.get(Aufgabe, a_id)) == {"a.1.1", "a.1.2"}
+
+
+def test_lernziel_nummer_konflikt(lp, app):
+    with app.app_context():
+        a1 = _lz("a1")
+        a1_id, q_id, text = a1.id, a1.thema_id, a1.text
+        codes = sorted(_codes(a1))
+    r = lp.post(f"/lp/lernziele/{a1_id}", data=_formular(thema=q_id, bereich="a", nummer="2", text="Anders", bivo=codes))
+    assert r.status_code == 200 and "existiert bereits" in r.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Lernziel, a1_id).text == text
+    r = lp.post(f"/lp/lernziele/{a1_id}", data=_formular(thema=q_id, bereich="a", nummer="1", text="Anders", bivo=codes))
+    assert r.status_code == 302
+    with app.app_context():
+        assert db.session.get(Lernziel, a1_id).text == "Anders"
+
+
+def test_lernziel_loeschen_blockiert(lp, app):
+    with app.app_context():
+        lz = _neues_lz(1, "a.1.1")
+        a = _aufgabe([lz], ["a.1.1"])
+        a.titel = "Pipettieren üben"
+        db.session.commit()
+        lz_id = lz.id
+    r = lp.post(f"/lp/lernziele/{lz_id}", data={"loeschen": "1"}, follow_redirects=True)
+    assert "Pipettieren üben" in r.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Lernziel, lz_id) is not None
+
+
+def test_lernziel_loeschen(lp, app):
+    with app.app_context():
+        lz = _neues_lz(1, "a.1.1")
+        db.session.commit()
+        lz_id = lz.id
+    r = lp.post(f"/lp/lernziele/{lz_id}", data={"loeschen": "1"})
+    assert r.status_code == 302
+    with app.app_context():
+        assert db.session.get(Lernziel, lz_id) is None
+
+
+def test_lernziele_liste_markiert_ohne_bivo(lp, app):
+    with app.app_context():
+        _neues_lz(1)
+        db.session.commit()
+    html = lp.get("/lp/lernziele").get_data(as_text=True)
+    assert "kein BiVo-Ziel" in html and "/lp/lernziele/neu?thema=" in html

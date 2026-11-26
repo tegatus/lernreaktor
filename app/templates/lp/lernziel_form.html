@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf, bivo_liste %}
+{% block title %}{{ 'Lernziel ' ~ lz.label if lz else 'Neues Lernziel' }}{% endblock %}
+{% block content %}
+<h1>{{ 'Lernziel ' ~ lz.label ~ ' bearbeiten' if lz else 'Neues Lernziel' }}</h1>
+<form method="post" class="card">{{ csrf() }}
+  <div class="aktionen">
+    <label class="feld">Thema
+      <select name="thema" required>
+        <option value="">– wählen –</option>
+        {% for t in themen %}<option value="{{ t.id }}" {{ 'selected' if t.id == w.thema }}>{{ t.name }}</option>{% endfor %}
+      </select></label>
+    <label class="feld">Bereich <input name="bereich" value="{{ w.bereich }}" maxlength="4" size="6" placeholder="automatisch"></label>
+    <label class="feld">Nr. <input name="nummer" value="{{ w.nummer }}" size="6" inputmode="numeric" placeholder="automatisch"></label>
+    <label class="feld">K-Stufe
+      <select name="k_stufe">
+        <option value="">–</option>
+        {% for k in range(1, 7) %}<option value="{{ k }}" {{ 'selected' if k == w.k_stufe }}>K{{ k }}</option>{% endfor %}
+      </select></label>
+  </div>
+  <label class="feld">Lernziel <input name="text" value="{{ w.text }}" required placeholder="Ich kann …"></label>
+  <p class="muted">Bereich und Nummer leer lassen: Der Bereich wird aus dem ersten gewählten Kompetenzziel übernommen,
+    die Nummer ist die nächste freie im Thema.</p>
+
+  <h3>BiVo-Kompetenzziele <span class="muted">(mindestens eins)</span></h3>
+  {% if lz %}<p class="muted">Änderungen werden an die Aufgaben weitergegeben, die dieses Lernziel verwenden.</p>{% endif %}
+  <div class="auswahl">{{ bivo_liste(bereiche, w.bivo) }}</div>
+
+  <div class="aktionen">
+    <button class="btn">Speichern</button>
+    <a class="btn sek" href="{{ url_for('lp.lernziele') }}">Abbrechen</a>
+    {% if lz %}<button class="link" name="loeschen" value="1" formnovalidate
+                       data-bestaetigen="Lernziel {{ lz.label }} löschen?">Löschen</button>{% endif %}
+  </div>
+</form>
+{% endblock %}
