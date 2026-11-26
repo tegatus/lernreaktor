@@ -552,8 +552,8 @@ def lernziel_bearbeiten(lz_id=None):
         w["bereich"] = w["bereich"][:4] or gueltig[0].split(".")[0]
         if not w["nummer"]:
             w["nummer"] = naechste_nummer(thema.id, w["bereich"])
-        elif not w["nummer"].isdigit() or int(w["nummer"]) < 1:
-            fehler = "Die Nummer muss eine positive ganze Zahl sein."
+        elif not re.fullmatch(r"[0-9]{1,5}", w["nummer"]) or int(w["nummer"]) < 1:
+            fehler = "Die Nummer muss eine positive ganze Zahl sein (höchstens 99999)."
     if not fehler:
         w["nummer"] = int(w["nummer"])
         doppelt = Lernziel.query.filter(Lernziel.thema_id == thema.id, Lernziel.bereich == w["bereich"],
@@ -580,9 +580,15 @@ def lernziel_bearbeiten(lz_id=None):
 def thema_bearbeiten(thema_id):
     t = db.get_or_404(Thema, thema_id)
     if request.form.get("loeschen") == "1":
+        from .lernziele import verknuepfungen_loesen
+        lz_ids = [lz.id for lz in t.lernziele]
         if Aufgabe.query.filter(Aufgabe.themen.any(Thema.id == t.id)).count():
             flash("Thema wird noch von Aufgaben verwendet.", "fehler")
+        elif lz_ids and Aufgabe.query.filter(Aufgabe.lernziele.any(Lernziel.id.in_(lz_ids))).count():
+            flash("Lernziele dieses Themas werden noch von Aufgaben verwendet.", "fehler")
         else:
+            for lz in t.lernziele:
+                verknuepfungen_loesen(lz)
             db.session.delete(t)
             db.session.commit()
             flash("Thema gelöscht.", "ok")

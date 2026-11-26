@@ -45,7 +45,16 @@ def lernziel_loeschen(lz):
     verwendet = aufgaben_mit(lz)
     if verwendet:
         return verwendet
-    for k in TheorieKapitel.query.filter(TheorieKapitel.lernziele.any(Lernziel.id == lz.id)):
-        k.lernziele.remove(lz)
+    verknuepfungen_loesen(lz)
     db.session.delete(lz)
     return []
+
+
+def verknuepfungen_loesen(lz, aufgaben=False):
+    """Entfernt die Verknüpfungen zu Theoriekapiteln (und mit aufgaben=True auch zu Aufgaben), damit das Lernziel
+    ohne Fremdschlüssel-Fehler gelöscht werden kann. Die BiVo-Codes der Aufgaben bleiben stehen. Kein Commit."""
+    for k in TheorieKapitel.query.filter(TheorieKapitel.lernziele.any(Lernziel.id == lz.id)):
+        k.lernziele.remove(lz)
+    if aufgaben:
+        for a in aufgaben_mit(lz):
+            a.lernziele.remove(lz)

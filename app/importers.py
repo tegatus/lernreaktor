@@ -5,7 +5,7 @@ import re
 
 import openpyxl
 
-from .lernziele import kompetenzziele_setzen
+from .lernziele import kompetenzziele_setzen, verknuepfungen_loesen
 from .models import (Aufgabe, Bereich, Handlungskompetenz, Leistungsziel, Lernziel, Thema, db)
 
 RE_HK = re.compile(r"^\s*([a-z])\.(\d+)\s*:?\s+(.*)$", re.S)
@@ -125,6 +125,7 @@ def import_lernziele(thema_name, eintraege, ersetzen=False):
         db.session.flush()
     if ersetzen:
         for lz in list(thema.lernziele):
+            verknuepfungen_loesen(lz, aufgaben=True)  # Verknüpfungen gehen verloren (Hinweis im Formular)
             db.session.delete(lz)
         db.session.flush()
     neu = akt = 0

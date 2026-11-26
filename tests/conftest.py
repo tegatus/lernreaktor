@@ -1,10 +1,19 @@
 import os
 
 import pytest
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from app import create_app
 from app.models import db
 from app.seed import seed_basisdaten, seed_demo
+
+
+@event.listens_for(Engine, "connect")
+def _sqlite_fremdschluessel(dbapi_conn, _):
+    # Wie PostgreSQL im Betrieb: Fremdschlüssel auch in den SQLite-Tests durchsetzen
+    if type(dbapi_conn).__module__.startswith("sqlite3"):
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
 
 @pytest.fixture

@@ -256,3 +256,63 @@ def test_lernziele_liste_ohne_k_stufe(lp, app):
         lz.k_stufe = None
         db.session.commit()
     assert "KNone" not in lp.get("/lp/lernziele").get_data(as_text=True)
+
+
+# ---------------------------------------------------------------- Befunde aus dem Review
+
+def _kapitel_mit(lz):
+    dok = TheorieDokument(titel="Skript")
+    k = TheorieKapitel(dokument=dok, titel="Kapitel", text="")
+    k.lernziele = [lz]
+    db.session.add_all([dok, k])
+    return k
+
+
+def test_import_ersetzen_mit_verknuepfungen(app):
+    from app.importers import import_lernziele, parse_lernziele
+    with app.app_context():
+        a1 = _lz("a1")
+        a = _aufgabe([a1], ["a.1.1"])
+        k = _kapitel_mit(a1)
+        db.session.commit()
+        a_id, k_id = a.id, k.id
+        import_lernziele("qPCR", parse_lernziele("1. Ich kann neu. (a.1.1, K2)"), ersetzen=True)
+        assert [lz.text for lz in _qpcr().lernziele] == ["Ich kann neu."]
+        assert db.session.get(Aufgabe, a_id).lernziele == []
+        assert db.session.get(TheorieKapitel, k_id).lernziele == []
+
+
+def test_thema_loeschen_blockiert_wenn_lernziel_verwendet(lp, app):
+    with app.app_context():
+        lz = _neues_lz(1, "a.1.1")
+        _aufgabe([lz], ["a.1.1"])  # Aufgabe ohne das Thema selbst
+        q_id = _qpcr().id
+    lp.post(f"/lp/themen/{q_id}", data={"loeschen": "1"})
+    with app.app_context():
+        assert db.session.get(Thema, q_id) is not None
+
+
+def test_thema_loeschen_entfernt_kapitelverknuepfung(lp, app):
+    with app.app_context():
+        t = Thema(name="Leer")
+        lz = Lernziel(thema=t, bereich="a", nummer=1, text="x")
+        db.session.add_all([t, lz])
+        k = _kapitel_mit(lz)
+        db.session.commit()
+        t_id, k_id = t.id, k.id
+    lp.post(f"/lp/themen/{t_id}", data={"loeschen": "1"})
+    with app.app_context():
+        assert db.session.get(Thema, t_id) is None
+        assert db.session.get(TheorieKapitel, k_id).lernziele == []
+
+
+def test_lernziel_nummer_ungueltig(lp, app):
+    with app.app_context():
+        q_id = _qpcr().id
+    for nr in ["²", "99999999999", "-3"]:
+        r = lp.post("/lp/lernziele/neu", data=_formular(thema=q_id, nummer=nr, text="Ich kann Z.", bivo=["a.1.1"]))
+        assert r.status_code == 200 and "positive ganze Zahl" in r.get_data(as_text=True), nr
+
+
+def test_lernziel_formular_laedt_auswahl_js(lp, app):
+    assert "auswahl.js" in lp.get("/lp/lernziele/neu").get_data(as_text=True)
