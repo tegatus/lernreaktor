@@ -603,6 +603,8 @@ def thema_bearbeiten(thema_id):
 @lp_required
 def kompetenzen():
     if request.method == "POST":
+        if not current_user.ist_admin:  # Die BiVo-Liste ändert sich nicht – Neueinlesen nur für Admins
+            abort(403)
         f = request.files.get("datei")
         try:
             nb, nh, nl = importers.import_kompetenzen(f)

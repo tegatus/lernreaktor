@@ -46,6 +46,18 @@ def register_cli(app):
             click.echo("Demo-Zugänge: lp / lp-demo-2026 · lea / lernen-2026 · noah / lernen-2026")
         click.echo("Datenbank bereit.")
 
+    @app.cli.command("set-admin")
+    @click.argument("benutzername")
+    @click.option("--entziehen", is_flag=True, help="Admin-Recht wieder entziehen")
+    def set_admin(benutzername, entziehen):
+        """Admin-Recht (z. B. BiVo-Kompetenzliste einlesen) für eine Lehrperson setzen oder entziehen."""
+        u = User.query.filter_by(benutzername=benutzername.lower()).first()
+        if not u or u.rolle != "lp":
+            raise click.ClickException(f"Keine Lehrperson mit Benutzername «{benutzername}».")
+        u.ist_admin = not entziehen
+        db.session.commit()
+        click.echo(f"{u.anzeigename}: Admin-Recht {'entzogen' if entziehen else 'gesetzt'}.")
+
     @app.cli.command("create-lp")
     @click.argument("benutzername")
     @click.argument("anzeigename")

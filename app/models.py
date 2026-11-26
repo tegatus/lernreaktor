@@ -43,6 +43,7 @@ class User(UserMixin, db.Model):
     klasse = db.relationship("Klasse", foreign_keys=[klasse_id], back_populates="lernende")
     aktiv = db.Column(db.Boolean, default=True, nullable=False)
     passwort_aendern = db.Column(db.Boolean, default=False, nullable=False)  # nach generiertem Startpasswort
+    ist_admin = db.Column(db.Boolean, default=False, nullable=False)  # Lehrperson mit Admin-Recht (flask set-admin)
 
     def set_passwort(self, pw):
         self.passwort_hash = generate_password_hash(pw)
@@ -504,6 +505,7 @@ SPALTEN_NACHTRAG = [  # (Tabelle, Spalte, DDL) – für bestehende Datenbanken o
     ("pruefung_aufgabe", "seed", "INTEGER"),
     ("user", "passwort_aendern", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("blatt_aufgabe", "niveau", "INTEGER"),
+    ("user", "ist_admin", "BOOLEAN NOT NULL DEFAULT FALSE"),
 ]
 
 

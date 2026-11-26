@@ -17,8 +17,10 @@
   {% endfor %}
 </details>
 {% endfor %}
+{% if current_user.ist_admin %}
 <form method="post" enctype="multipart/form-data" class="card">{{ csrf() }}
   <strong>Kompetenzliste neu einlesen</strong> (Excel: Spalte A Bereich, Spalte B Text mit Code, Spalte C K-Stufe; bestehende Codes werden aktualisiert)
   <div class="aktionen"><input type="file" name="datei" accept=".xlsx" required><button class="btn klein">Importieren</button></div>
 </form>
+{% endif %}
 {% endblock %}
