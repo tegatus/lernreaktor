@@ -251,7 +251,7 @@ def test_aufgabenformular_hat_bivo_daten(lp, app):
         b16 = _lz("b16").id
     html = lp.get("/lp/aufgaben/neu").get_data(as_text=True)
     assert f'data-bivo="b.5.3 b.5.4" name="lernziel" value="{b16}"' in html
-    assert "data-bivo" not in lp.get("/lp/pruefungen/neu").get_data(as_text=True)
+    assert 'data-verknuepfen="einseitig"' in html
 
 
 def test_lernziele_liste_ohne_k_stufe(lp, app):

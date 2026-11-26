@@ -6,7 +6,7 @@
   <p class="muted">Wähle aus, was du üben möchtest. Lernziele und Kompetenzziele gehören zusammen: Wählst du das eine,
     wird das passende andere mit angekreuzt, und es reicht, wenn eine Aufgabe eines davon trifft. Ein gewähltes Thema
     muss zusätzlich passen (z. B. Thema «qPCR» <em>und</em> Kompetenzziel «a.2.3» = Rechenaufgaben zur qPCR).</p>
-  {{ auswahl(themen, bereiche) }}
+  {{ auswahl(themen, bereiche, verknuepfen='beidseitig') }}
   <div class="card">
     <div class="zweispaltig">
       <label class="feld">Anzahl Aufgaben <input type="number" name="anzahl" value="5" min="1" max="25"></label>

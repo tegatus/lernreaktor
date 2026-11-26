@@ -23,7 +23,7 @@
 <h3>Umfang &amp; abzudeckende Ziele</h3>
 <p class="muted"><strong>Themen</strong> begrenzen den Aufgabenpool. Gewählte <strong>Lernziele</strong> und <strong>BiVo-Kompetenzziele</strong>
   werden möglichst alle abgedeckt (je mindestens eine Aufgabe); danach wird bis zur Ziel-Punktzahl aufgefüllt.</p>
-{{ auswahl(themen, bereiche) }}
+{{ auswahl(themen, bereiche, verknuepfen='beidseitig') }}
 <p class="trefferzahl" data-trefferzahl="{{ url_for('lernende.anzahl') }}" data-pruefung="1"></p>
 <button class="btn">Prüfung zusammenstellen</button>
 </form>

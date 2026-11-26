@@ -35,3 +35,25 @@ def test_thema_bleibt_und(app):
         ids = {a.id for a in filter_aufgaben(themen_ids=[anderes.id], leistungsziel_codes=["e.1.1"],
                                              lernziel_ids=[_b16().id])}
         assert mit_thema.id in ids and nur_code.id not in ids
+
+
+def _login(app, name, pw):
+    c = app.test_client()
+    c.post("/login", data={"benutzername": name, "passwort": pw})
+    return c
+
+
+def test_uebungsblatt_verknuepft_beidseitig(app):
+    with app.app_context():
+        b16 = _b16().id
+    html = _login(app, "lea", "lernen-2026").get("/lernende/neu").get_data(as_text=True)
+    assert 'data-verknuepfen="beidseitig"' in html
+    assert f'data-bivo="b.5.3 b.5.4" name="lernziel" value="{b16}"' in html
+
+
+def test_pruefung_verknuepft_beidseitig(lp, app):
+    with app.app_context():
+        b16 = _b16().id
+    html = lp.get("/lp/pruefungen/neu").get_data(as_text=True)
+    assert 'data-verknuepfen="beidseitig"' in html
+    assert f'data-bivo="b.5.3 b.5.4" name="lernziel" value="{b16}"' in html

@@ -11,16 +11,27 @@ document.querySelectorAll('.auswahl').forEach(box => {
     const alleAn = boxes.every(c => c.checked);
     boxes.forEach(c => { c.checked = !alleAn; });
     if (boxes.some(c => c.dataset.bivo !== undefined)) bivoAbgleichen(box, boxes);
+    if (beidseitig && boxes.some(c => c.name === 'bivo')) lernzieleAbgleichen(box, boxes);
     box.dispatchEvent(new Event('change', { bubbles: true }));
   }));
 
-  // Aufgabenformular: Lernziele (data-bivo) kreuzen ihre BiVo-Kompetenzziele mit an bzw. ab
+  // Lernziele (data-bivo) kreuzen ihre BiVo-Kompetenzziele mit an bzw. ab (Aufgabenformular: nur diese Richtung)
+  const beidseitig = box.dataset.verknuepfen === 'beidseitig';
   const lzBoxen = [...box.querySelectorAll('input[name=lernziel][data-bivo]')];
   if (lzBoxen.length) {
     lzBoxen.forEach(c => c.addEventListener('change', () => bivoAbgleichen(box, [c])));
     bivoAbgleichen(box, lzBoxen.filter(c => c.checked));  // Vorauswahl (z. B. «+ Aufgabe» beim Lernziel)
+    // Übungsblatt/Prüfung: ein Kompetenzziel kreuzt auch die Lernziele an, die darauf beruhen (ohne Kettenreaktion)
+    if (beidseitig) box.querySelectorAll('input[name=bivo]').forEach(c =>
+      c.addEventListener('change', () => lernzieleAbgleichen(box, [c])));
   }
 });
+
+function lernzieleAbgleichen(box, codesGeaendert) {
+  codesGeaendert.forEach(code => box.querySelectorAll('input[name=lernziel][data-bivo]').forEach(lz => {
+    if (lz.dataset.bivo.split(' ').includes(code.value)) lz.checked = code.checked;
+  }));
+}
 
 function bivoAbgleichen(box, geaendert) {
   const codes = c => c.dataset.bivo.split(' ').filter(Boolean);

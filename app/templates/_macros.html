@@ -29,8 +29,9 @@
     {% endfor %}
 {% endmacro %}
 
-{% macro auswahl(themen, bereiche, sel_themen=[], sel_lernziele=[], sel_bivo=[], sel_k=[], zeige_k=true, offen=false, bivo_mitnehmen=false) %}
-<div class="auswahl">
+{% macro auswahl(themen, bereiche, sel_themen=[], sel_lernziele=[], sel_bivo=[], sel_k=[], zeige_k=true, offen=false, verknuepfen=none) %}
+{# verknuepfen: none | 'einseitig' (Lernziel → Kompetenzziele) | 'beidseitig' (auch Kompetenzziel → Lernziele) #}
+<div class="auswahl"{% if verknuepfen %} data-verknuepfen="{{ verknuepfen }}"{% endif %}>
   <div class="tabs" role="tablist">
     <button type="button" class="tab aktiv" data-tab="t-themen">Themen</button>
     <button type="button" class="tab" data-tab="t-lernziele">Lernziele</button>
@@ -52,7 +53,7 @@
           <button type="button" class="link alle" data-scope="lz-{{ t.id }}">alle</button></summary>
         <div class="liste" id="lz-{{ t.id }}">
         {% for lz in t.lernziele %}
-          <label class="zeile"><input type="checkbox" {% if bivo_mitnehmen %}data-bivo="{{ lz.leistungsziele|map(attribute='code')|join(' ') }}" {% endif %}name="lernziel" value="{{ lz.id }}" {{ 'checked' if lz.id in sel_lernziele }}>
+          <label class="zeile"><input type="checkbox" {% if verknuepfen %}data-bivo="{{ lz.leistungsziele|map(attribute='code')|join(' ') }}" {% endif %}name="lernziel" value="{{ lz.id }}" {{ 'checked' if lz.id in sel_lernziele }}>
             <span class="code">{{ lz.kuerzel }}</span> {{ lz.text }}
             <span class="muted">({{ lz.leistungsziele|map(attribute='code')|join(', ') }}{% if lz.k_stufe %}, K{{ lz.k_stufe }}{% endif %})</span>
           </label>
