@@ -212,3 +212,29 @@ def test_lernziele_liste_markiert_ohne_bivo(lp, app):
         db.session.commit()
     html = lp.get("/lp/lernziele").get_data(as_text=True)
     assert "kein BiVo-Ziel" in html and "/lp/lernziele/neu?thema=" in html
+
+
+# ---------------------------------------------------------------- Import
+
+def test_import_ohne_gueltigen_code_abgelehnt(app):
+    from app.importers import import_lernziele, parse_lernziele
+    with app.app_context():
+        e = parse_lernziele("1. Ich kann A. (x.9.9, K2) 2. Ich kann B. (a.1.1, x.9.9, K2)")
+        assert len(e) == 2
+        _, neu, akt, fehlend, abgelehnt = import_lernziele("Neues Thema", e)
+        assert (neu, akt, fehlend) == (1, 0, ["x.9.9"])
+        assert [x["nummer"] for x in abgelehnt] == [1]
+        t = Thema.query.filter_by(name="Neues Thema").one()
+        assert [(lz.nummer, _codes(lz)) for lz in t.lernziele] == [(2, {"a.1.1"})]
+
+
+def test_import_vorschau_warnt(lp, app):
+    r = lp.post("/lp/lernziele/import", data={"thema": "Neu", "text": "1. Ich kann A. (x.9.9, K2)"})
+    assert "wird nicht importiert" in r.get_data(as_text=True)
+
+
+def test_import_meldet_abgelehnte(lp, app):
+    r = lp.post("/lp/lernziele/import", data={"thema": "Neu", "bestaetigt": "1",
+                                              "text": "1. Ich kann A. (x.9.9, K2) 2. Ich kann B. (a.1.1, K2)"},
+                follow_redirects=True)
+    assert "ohne gültigen BiVo-Code nicht importiert" in r.get_data(as_text=True)

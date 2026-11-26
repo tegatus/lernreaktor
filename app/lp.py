@@ -486,15 +486,20 @@ def lernziele_import():
         elif not eintraege:
             flash("Keine Lernziele erkannt. Format: '1. Ich kann … (a.1.1, K2)'.", "fehler")
         elif request.form.get("bestaetigt") == "1":
-            t, neu, akt, fehlend = importers.import_lernziele(thema, eintraege, request.form.get("ersetzen") == "1")
+            t, neu, akt, fehlend, abgelehnt = importers.import_lernziele(thema, eintraege,
+                                                                          request.form.get("ersetzen") == "1")
             flash(f"{t.name}: {neu} neue, {akt} aktualisierte Lernziele.", "ok")
+            if abgelehnt:
+                flash(f"{len(abgelehnt)} Einträge ohne gültigen BiVo-Code nicht importiert: "
+                      + ", ".join(f"{e['bereich']}{e['nummer']}" for e in abgelehnt), "fehler")
             if fehlend:
                 flash("Unbekannte BiVo-Codes (nicht verknüpft): " + ", ".join(fehlend), "info")
             return redirect(url_for(".lernziele"))
         else:
             vorschau = eintraege
-        return render_template("lp/lernziele_import.html", vorschau=vorschau, thema=thema, text=text)
-    return render_template("lp/lernziele_import.html", vorschau=None, thema="", text="")
+        bekannte = {l.code for l in Leistungsziel.query} if vorschau else set()
+        return render_template("lp/lernziele_import.html", vorschau=vorschau, thema=thema, text=text, bekannte=bekannte)
+    return render_template("lp/lernziele_import.html", vorschau=None, thema="", text="", bekannte=set())
 
 
 @bp.route("/lernziele/neu", methods=["GET", "POST"])

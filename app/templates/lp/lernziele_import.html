@@ -12,7 +12,8 @@
   {% if vorschau %}
     <h3>Vorschau: {{ vorschau|length }} Lernziele erkannt</h3>
     <table class="tab"><tr><th>Nr.</th><th>Text</th><th>BiVo</th><th>K</th></tr>
-    {% for e in vorschau %}<tr><td>{{ e.bereich }}{{ e.nummer }}</td><td>{{ e.text }}</td><td>{{ e.codes|join(', ') }}</td><td>K{{ e.k_stufe }}</td></tr>{% endfor %}
+    {% for e in vorschau %}<tr><td>{{ e.bereich }}{{ e.nummer }}</td><td>{{ e.text }}</td><td>{{ e.codes|join(', ') }}{% if not e.codes|select('in', bekannte)|list %}
+      <br><span class="luecke">kein gültiger BiVo-Code – wird nicht importiert</span>{% endif %}</td><td>K{{ e.k_stufe }}</td></tr>{% endfor %}
     </table>
     <input type="hidden" name="bestaetigt" value="1">
     <p><label><input type="checkbox" name="ersetzen" value="1"> Bestehende Lernziele dieses Themas vorher löschen

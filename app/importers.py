@@ -114,7 +114,10 @@ def parse_lernziele(text):
 
 
 def import_lernziele(thema_name, eintraege, ersetzen=False):
-    """Legt die Lernziele beim Thema an (aktualisiert gleiche Bereich+Nummer). Gibt (thema, neu, aktualisiert, fehlende_codes)."""
+    """Legt die Lernziele beim Thema an (aktualisiert gleiche Bereich+Nummer).
+
+    Einträge ohne einen einzigen bekannten BiVo-Code werden nicht übernommen (jedes Lernziel braucht mindestens ein
+    Kompetenzziel). Gibt (thema, neu, aktualisiert, fehlende_codes, abgelehnte_eintraege) zurück."""
     thema = Thema.query.filter_by(name=thema_name).first()
     if not thema:
         thema = Thema(name=thema_name)
@@ -126,7 +129,12 @@ def import_lernziele(thema_name, eintraege, ersetzen=False):
         db.session.flush()
     neu = akt = 0
     fehlend = set()
+    abgelehnt = []
     for e in eintraege:
+        fehlend.update(c for c in e["codes"] if not db.session.get(Leistungsziel, c))
+        if all(c in fehlend for c in e["codes"]):
+            abgelehnt.append(e)
+            continue
         lz = Lernziel.query.filter_by(thema_id=thema.id, bereich=e["bereich"], nummer=e["nummer"]).first()
         if lz:
             akt += 1
@@ -135,10 +143,9 @@ def import_lernziele(thema_name, eintraege, ersetzen=False):
             db.session.add(lz)
             neu += 1
         lz.text, lz.k_stufe = e["text"], e["k_stufe"]
-        fehlend.update(c for c in e["codes"] if not db.session.get(Leistungsziel, c))
         kompetenzziele_setzen(lz, e["codes"])
     db.session.commit()
-    return thema, neu, akt, sorted(fehlend)
+    return thema, neu, akt, sorted(fehlend), abgelehnt
 
 
 # ---------------------------------------------------------------- Aufgaben (JSON)
