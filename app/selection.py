@@ -7,17 +7,21 @@ from .models import (Aufgabe, BlattAufgabe, Leistungsziel, Lernziel, Thema, Uebu
 
 
 def filter_aufgaben(themen_ids=(), leistungsziel_codes=(), lernziel_ids=(), k_stufen=(), verwendungen=("beide", "uebung")):
-    """Innerhalb einer Kategorie ODER, zwischen den Kategorien UND."""
+    """Innerhalb einer Kategorie ODER, zwischen den Kategorien UND. Lernziele und BiVo-Kompetenzziele bilden
+    zusammen eine Kategorie (Lernziele beruhen auf Kompetenzzielen und werden in der Auswahl gemeinsam angekreuzt)."""
     q = Aufgabe.query.filter(Aufgabe.aktiv.is_(True), Aufgabe.verwendung.in_(list(verwendungen)))
     if themen_ids:
         q = q.filter(Aufgabe.id.in_(db.select(aufgabe_thema.c.aufgabe_id)
                                     .where(aufgabe_thema.c.thema_id.in_(list(themen_ids)))))
+    ziele = []
     if leistungsziel_codes:
-        q = q.filter(Aufgabe.id.in_(db.select(aufgabe_leistungsziel.c.aufgabe_id)
+        ziele.append(Aufgabe.id.in_(db.select(aufgabe_leistungsziel.c.aufgabe_id)
                                     .where(aufgabe_leistungsziel.c.leistungsziel_code.in_(list(leistungsziel_codes)))))
     if lernziel_ids:
-        q = q.filter(Aufgabe.id.in_(db.select(aufgabe_lernziel.c.aufgabe_id)
+        ziele.append(Aufgabe.id.in_(db.select(aufgabe_lernziel.c.aufgabe_id)
                                     .where(aufgabe_lernziel.c.lernziel_id.in_(list(lernziel_ids)))))
+    if ziele:
+        q = q.filter(db.or_(*ziele))
     if k_stufen:
         q = q.filter(Aufgabe.k_stufe.in_(list(k_stufen)))
     return q.order_by(Aufgabe.id).all()

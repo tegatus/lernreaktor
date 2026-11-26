@@ -3,8 +3,9 @@
 {% block content %}
 <h1>Neues Übungsblatt zusammenstellen</h1>
 <form method="post">{{ csrf() }}
-  <p class="muted">Wähle aus, was du üben möchtest. Innerhalb eines Reiters reicht eine Übereinstimmung,
-    zwischen den Reitern müssen alle zutreffen (z. B. Thema «qPCR» <em>und</em> Kompetenzziel «a.2.3» = Rechenaufgaben zur qPCR).</p>
+  <p class="muted">Wähle aus, was du üben möchtest. Lernziele und Kompetenzziele gehören zusammen: Wählst du das eine,
+    wird das passende andere mit angekreuzt, und es reicht, wenn eine Aufgabe eines davon trifft. Ein gewähltes Thema
+    muss zusätzlich passen (z. B. Thema «qPCR» <em>und</em> Kompetenzziel «a.2.3» = Rechenaufgaben zur qPCR).</p>
   {{ auswahl(themen, bereiche) }}
   <div class="card">
     <div class="zweispaltig">
