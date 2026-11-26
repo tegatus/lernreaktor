@@ -64,6 +64,9 @@ Dann http://127.0.0.1:5000 öffnen. Demo-Zugänge: `lp` / `lp-demo-2026` (Lehrpe
 
 Eigenes Lehrpersonen-Konto: `.venv/bin/flask --app run create-lp mmuster "Maria Muster"`
 
+Admin-Recht (nur Admins dürfen die BiVo-Kompetenzliste neu einlesen): `.venv/bin/flask --app run set-admin mmuster`
+(`--entziehen` nimmt es wieder weg). Die Demo-Lehrperson `lp` ist kein Admin.
+
 Tests: `.venv/bin/python -m pytest`
 
 ## Aufbau

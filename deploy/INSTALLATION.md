@@ -46,7 +46,11 @@ Das Skript kann gefahrlos erneut ausgeführt werden; Daten, Schlüssel und Zerti
 
 ```bash
 sudo lernreaktor-flask create-lp vorname.name "Vorname Name"
+sudo lernreaktor-flask set-admin vorname.name   # Admin-Recht: BiVo-Kompetenzliste neu einlesen
 ```
+
+Admin-Recht wieder entziehen: `sudo lernreaktor-flask set-admin vorname.name --entziehen`.
+In der Docker-Variante: `docker exec lernreaktor flask --app run set-admin vorname.name`.
 
 **4. Im Browser öffnen:** `https://<IP-Adresse des Servers>`
 

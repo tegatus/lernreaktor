@@ -378,3 +378,22 @@ def test_import_unbekanntes_thema(lp, app):
 def test_lernziele_seite_hat_thema_formular(lp, app):
     html = lp.get("/lp/lernziele").get_data(as_text=True)
     assert 'action="/lp/themen/neu"' in html and "/lp/lernziele/import?thema=" in html
+
+
+def test_thema_anlegen_doppelt_gross_klein(lp, app):
+    r = lp.post("/lp/themen/neu", data={"name": "QPCR"}, follow_redirects=True)
+    assert "existiert bereits" in r.get_data(as_text=True)
+    with app.app_context():
+        assert Thema.query.filter(db.func.lower(Thema.name) == "qpcr").count() == 1
+
+
+def test_thema_umbenennen_auf_bestehenden_namen(lp, app):
+    with app.app_context():
+        t = Thema(name="Anderes")
+        db.session.add(t)
+        db.session.commit()
+        t_id = t.id
+    r = lp.post(f"/lp/themen/{t_id}", data={"name": "qpcr"}, follow_redirects=True)
+    assert r.status_code == 200 and "existiert bereits" in r.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Thema, t_id).name == "Anderes"

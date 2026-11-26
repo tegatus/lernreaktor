@@ -511,10 +511,10 @@ def lernziele_import():
 @lp_required
 def thema_neu():
     """Neues Thema anlegen – Lernziele werden danach in ein bestehendes Thema importiert oder erfasst."""
-    name = request.form.get("name", "").strip()[:120]
+    name = request.form.get("name", "")[:120].strip()
     if not name:
         flash("Bitte einen Namen für das Thema angeben.", "fehler")
-    elif Thema.query.filter_by(name=name).first():
+    elif _thema_gleichen_namens(name):
         flash(f"Thema «{name}» existiert bereits.", "fehler")
     else:
         db.session.add(Thema(name=name, beschreibung=request.form.get("beschreibung", "").strip()))
@@ -614,10 +614,22 @@ def thema_bearbeiten(thema_id):
             db.session.commit()
             flash("Thema gelöscht.", "ok")
     else:
-        t.name = request.form.get("name", t.name).strip() or t.name
+        name = request.form.get("name", "")[:120].strip() or t.name
+        if _thema_gleichen_namens(name, ausser=t):
+            flash(f"Thema «{name}» existiert bereits.", "fehler")
+            return redirect(url_for(".lernziele"))
+        t.name = name
         t.beschreibung = request.form.get("beschreibung", "")
         db.session.commit()
     return redirect(url_for(".lernziele"))
+
+
+def _thema_gleichen_namens(name, ausser=None):
+    """Bestehendes Thema mit demselben Namen (Gross-/Kleinschreibung egal), z. B. «QPCR» neben «qPCR»."""
+    q = Thema.query.filter(db.func.lower(Thema.name) == name.lower())
+    if ausser is not None:
+        q = q.filter(Thema.id != ausser.id)
+    return q.first()
 
 
 @bp.route("/kompetenzen", methods=["GET", "POST"])
