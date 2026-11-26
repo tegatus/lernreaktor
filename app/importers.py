@@ -5,6 +5,7 @@ import re
 
 import openpyxl
 
+from .lernziele import kompetenzziele_setzen
 from .models import (Aufgabe, Bereich, Handlungskompetenz, Leistungsziel, Lernziel, Thema, db)
 
 RE_HK = re.compile(r"^\s*([a-z])\.(\d+)\s*:?\s+(.*)$", re.S)
@@ -134,13 +135,8 @@ def import_lernziele(thema_name, eintraege, ersetzen=False):
             db.session.add(lz)
             neu += 1
         lz.text, lz.k_stufe = e["text"], e["k_stufe"]
-        lz.leistungsziele = []
-        for c in e["codes"]:
-            obj = db.session.get(Leistungsziel, c)
-            if obj:
-                lz.leistungsziele.append(obj)
-            else:
-                fehlend.add(c)
+        fehlend.update(c for c in e["codes"] if not db.session.get(Leistungsziel, c))
+        kompetenzziele_setzen(lz, e["codes"])
     db.session.commit()
     return thema, neu, akt, sorted(fehlend)
 
