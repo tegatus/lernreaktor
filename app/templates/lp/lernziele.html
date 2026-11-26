@@ -6,6 +6,12 @@
   <span><a class="btn sek" href="{{ url_for('lp.lernziel_bearbeiten') }}">+ Lernziel</a>
     <a class="btn" href="{{ url_for('lp.lernziele_import') }}">Lernziele importieren</a></span>
 </div>
+<form method="post" action="{{ url_for('lp.thema_neu') }}" class="card aktionen">{{ csrf() }}
+  <strong>Neues Thema</strong>
+  <input name="name" placeholder="Name, z. B. Gelelektrophorese" required maxlength="120">
+  <input name="beschreibung" placeholder="Beschreibung (optional)" size="40">
+  <button class="btn klein">Thema anlegen</button>
+</form>
 <p class="muted">Die Zahlen zeigen, wie viele aktive Aufgaben ein Lernziel abdecken (Übung / Prüfung).
   <span class="luecke">Rot</span> = noch keine Aufgabe vorhanden.</p>
 {% for t in themen %}
@@ -26,7 +32,8 @@
     {% endfor %}
   </table>
   {% endif %}
-  <p><a class="btn klein" href="{{ url_for('lp.lernziel_bearbeiten', thema=t.id) }}">+ Lernziel</a></p>
+  <p><a class="btn klein" href="{{ url_for('lp.lernziel_bearbeiten', thema=t.id) }}">+ Lernziel</a>
+     <a class="btn klein sek" href="{{ url_for('lp.lernziele_import', thema=t.id) }}">Lernziele importieren</a></p>
   <form method="post" action="{{ url_for('lp.thema_bearbeiten', thema_id=t.id) }}" class="aktionen">{{ csrf() }}
     <input name="name" value="{{ t.name }}"> <input name="beschreibung" value="{{ t.beschreibung }}" placeholder="Beschreibung" size="40">
     <button class="btn klein sek">Umbenennen</button>

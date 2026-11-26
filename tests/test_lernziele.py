@@ -229,12 +229,16 @@ def test_import_ohne_gueltigen_code_abgelehnt(app):
 
 
 def test_import_vorschau_warnt(lp, app):
-    r = lp.post("/lp/lernziele/import", data={"thema": "Neu", "text": "1. Ich kann A. (x.9.9, K2)"})
+    with app.app_context():
+        q_id = _qpcr().id
+    r = lp.post("/lp/lernziele/import", data={"thema_id": q_id, "text": "1. Ich kann A. (x.9.9, K2)"})
     assert "wird nicht importiert" in r.get_data(as_text=True)
 
 
 def test_import_meldet_abgelehnte(lp, app):
-    r = lp.post("/lp/lernziele/import", data={"thema": "Neu", "bestaetigt": "1",
+    with app.app_context():
+        q_id = _qpcr().id
+    r = lp.post("/lp/lernziele/import", data={"thema_id": q_id, "bestaetigt": "1",
                                               "text": "1. Ich kann A. (x.9.9, K2) 2. Ich kann B. (a.1.1, K2)"},
                 follow_redirects=True)
     assert "ohne gültigen BiVo-Code nicht importiert" in r.get_data(as_text=True)
@@ -316,3 +320,61 @@ def test_lernziel_nummer_ungueltig(lp, app):
 
 def test_lernziel_formular_laedt_auswahl_js(lp, app):
     assert "auswahl.js" in lp.get("/lp/lernziele/neu").get_data(as_text=True)
+
+
+# ---------------------------------------------------------------- Themen zuerst anlegen
+
+def test_thema_anlegen(lp, app):
+    r = lp.post("/lp/themen/neu", data={"name": "  Gelelektrophorese ", "beschreibung": "Agarose"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/lp/lernziele")
+    with app.app_context():
+        assert Thema.query.filter_by(name="Gelelektrophorese").one().beschreibung == "Agarose"
+
+
+def test_thema_anlegen_doppelt(lp, app):
+    r = lp.post("/lp/themen/neu", data={"name": " qPCR "}, follow_redirects=True)
+    assert "existiert bereits" in r.get_data(as_text=True)
+    with app.app_context():
+        assert Thema.query.filter_by(name="qPCR").count() == 1
+
+
+def test_thema_anlegen_ohne_namen(lp, app):
+    with app.app_context():
+        n = Thema.query.count()
+    lp.post("/lp/themen/neu", data={"name": "  "})
+    with app.app_context():
+        assert Thema.query.count() == n
+
+
+def test_import_hat_themen_auswahl(lp, app):
+    with app.app_context():
+        q_id = _qpcr().id
+    html = lp.get(f"/lp/lernziele/import?thema={q_id}").get_data(as_text=True)
+    assert '<select name="thema_id"' in html and f'value="{q_id}" selected' in html
+
+
+def test_import_ohne_themen_hinweis(lp, app):
+    from app.models import aufgabe_lernziel, aufgabe_thema, kapitel_lernziel
+    with app.app_context():
+        for tabelle in (aufgabe_thema, aufgabe_lernziel, kapitel_lernziel):
+            db.session.execute(tabelle.delete())
+        for t in Thema.query.all():
+            db.session.delete(t)
+        db.session.commit()
+    html = lp.get("/lp/lernziele/import").get_data(as_text=True)
+    assert "zuerst ein Thema" in html and '<select name="thema_id"' not in html
+
+
+def test_import_unbekanntes_thema(lp, app):
+    with app.app_context():
+        n = Thema.query.count()
+    r = lp.post("/lp/lernziele/import", data={"thema_id": "9999", "bestaetigt": "1",
+                                              "text": "1. Ich kann A. (a.1.1, K2)"})
+    assert "Bitte ein Thema" in r.get_data(as_text=True)
+    with app.app_context():
+        assert Thema.query.count() == n
+
+
+def test_lernziele_seite_hat_thema_formular(lp, app):
+    html = lp.get("/lp/lernziele").get_data(as_text=True)
+    assert 'action="/lp/themen/neu"' in html and "/lp/lernziele/import?thema=" in html

@@ -474,15 +474,18 @@ def lernziele():
 @lp_required
 def lernziele_import():
     vorschau = None
+    themen = Thema.query.order_by(Thema.name).all()
     if request.method == "POST":
-        thema = request.form.get("thema", "").strip()
+        t_obj = db.session.get(Thema, request.form.get("thema_id", type=int) or 0)
+        thema = t_obj.name if t_obj else ""
+        thema_id = t_obj.id if t_obj else None
         text = request.form.get("text", "")
         datei = request.files.get("datei")
         if datei and datei.filename:
             text = importers.pdf_zu_text(datei.read())
         eintraege = importers.parse_lernziele(text)
         if not thema:
-            flash("Bitte einen Themennamen angeben.", "fehler")
+            flash("Bitte ein Thema wählen.", "fehler")
         elif not eintraege:
             flash("Keine Lernziele erkannt. Format: '1. Ich kann … (a.1.1, K2)'.", "fehler")
         elif request.form.get("bestaetigt") == "1":
@@ -498,8 +501,26 @@ def lernziele_import():
         else:
             vorschau = eintraege
         bekannte = {l.code for l in Leistungsziel.query} if vorschau else set()
-        return render_template("lp/lernziele_import.html", vorschau=vorschau, thema=thema, text=text, bekannte=bekannte)
-    return render_template("lp/lernziele_import.html", vorschau=None, thema="", text="", bekannte=set())
+        return render_template("lp/lernziele_import.html", vorschau=vorschau, themen=themen, thema_id=thema_id,
+                               text=text, bekannte=bekannte)
+    return render_template("lp/lernziele_import.html", vorschau=None, themen=themen,
+                           thema_id=request.args.get("thema", type=int), text="", bekannte=set())
+
+
+@bp.route("/themen/neu", methods=["POST"])
+@lp_required
+def thema_neu():
+    """Neues Thema anlegen – Lernziele werden danach in ein bestehendes Thema importiert oder erfasst."""
+    name = request.form.get("name", "").strip()[:120]
+    if not name:
+        flash("Bitte einen Namen für das Thema angeben.", "fehler")
+    elif Thema.query.filter_by(name=name).first():
+        flash(f"Thema «{name}» existiert bereits.", "fehler")
+    else:
+        db.session.add(Thema(name=name, beschreibung=request.form.get("beschreibung", "").strip()))
+        db.session.commit()
+        flash(f"Thema «{name}» angelegt.", "ok")
+    return redirect(url_for(".lernziele"))
 
 
 @bp.route("/lernziele/neu", methods=["GET", "POST"])

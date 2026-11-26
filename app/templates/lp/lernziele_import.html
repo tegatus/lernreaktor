@@ -2,8 +2,16 @@
 {% block title %}Lernziele importieren{% endblock %}
 {% block content %}
 <h1>Konkrete Lernziele importieren</h1>
+{% if not themen %}
+<p class="card">Es gibt noch kein Thema. Bitte zuerst ein Thema auf der Seite
+  <a href="{{ url_for('lp.lernziele') }}">Lernziele</a> anlegen.</p>
+{% else %}
 <form method="post" enctype="multipart/form-data" class="card">{{ csrf() }}
-  <label class="feld">Thema <input name="thema" value="{{ thema }}" placeholder="z. B. qPCR" required></label>
+  <label class="feld">Thema
+    <select name="thema_id" required>
+      <option value="">– wählen –</option>
+      {% for t in themen %}<option value="{{ t.id }}" {{ 'selected' if t.id == thema_id }}>{{ t.name }}</option>{% endfor %}
+    </select></label>
   <label class="feld">PDF hochladen <input type="file" name="datei" accept="application/pdf"></label>
   <label class="feld">… oder Text einfügen
     <textarea name="text" rows="10" placeholder="1. Ich kann die Zielsetzung eines qPCR-Auftrags … erklären. (a.1.1, K2)">{{ text }}</textarea></label>
@@ -23,4 +31,5 @@
     <button class="btn">Vorschau</button>
   {% endif %}
 </form>
+{% endif %}
 {% endblock %}
