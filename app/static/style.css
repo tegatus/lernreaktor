@@ -130,6 +130,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 label.feld input, label.feld select, label.feld textarea { display: block; width: 100%; margin-top: .3rem; font-weight: 400; }
 textarea { font-family: var(--mono) !important; font-size: .88rem !important; line-height: 1.55; }
 input[type=checkbox], input[type=radio] { accent-color: var(--akzent); }
+.auswahl input[data-auto] { opacity: .45; }  /* mitangekreuzt, nur Anzeige */
 .zweispaltig { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
 .vierspaltig { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; }
 @media (max-width: 760px) { .zweispaltig, .vierspaltig { grid-template-columns: 1fr 1fr; } }

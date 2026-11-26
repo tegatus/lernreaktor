@@ -8,9 +8,9 @@ document.querySelectorAll('.auswahl').forEach(box => {
   box.querySelectorAll('button.alle').forEach(b => b.addEventListener('click', ev => {
     ev.preventDefault();
     const boxes = [...document.getElementById(b.dataset.scope).querySelectorAll('input[type=checkbox]')];
-    const alleAn = boxes.every(c => c.checked);
-    boxes.forEach(c => { c.checked = !alleAn; });
-    if (boxes.some(c => c.dataset.bivo !== undefined)) bivoAbgleichen(box, boxes);
+    const alleAn = boxes.every(c => c.checked && !istAuto(c));
+    boxes.forEach(c => { c.checked = !alleAn; setzeAuto(c, false); });
+    if (boxes.some(c => c.dataset.bivo !== undefined)) bivoAbgleichen(box, boxes, beidseitig);
     if (beidseitig && boxes.some(c => c.name === 'bivo')) lernzieleAbgleichen(box, boxes);
     box.dispatchEvent(new Event('change', { bubbles: true }));
   }));
@@ -19,28 +19,55 @@ document.querySelectorAll('.auswahl').forEach(box => {
   const beidseitig = box.dataset.verknuepfen === 'beidseitig';
   const lzBoxen = [...box.querySelectorAll('input[name=lernziel][data-bivo]')];
   if (lzBoxen.length) {
-    lzBoxen.forEach(c => c.addEventListener('change', () => bivoAbgleichen(box, [c])));
-    bivoAbgleichen(box, lzBoxen.filter(c => c.checked));  // Vorauswahl (z. B. «+ Aufgabe» beim Lernziel)
-    // Übungsblatt/Prüfung: ein Kompetenzziel kreuzt auch die Lernziele an, die darauf beruhen (ohne Kettenreaktion)
+    lzBoxen.forEach(c => c.addEventListener('change', () => { direkt(c); bivoAbgleichen(box, [c], beidseitig); }));
+    bivoAbgleichen(box, lzBoxen.filter(c => c.checked), beidseitig);  // Vorauswahl (z. B. «+ Aufgabe» beim Lernziel)
+    // Übungsblatt/Prüfung: ein Kompetenzziel kreuzt auch die Lernziele an, die darauf beruhen (ohne Kettenreaktion).
+    // Mitangekreuzte Partner sind nur Anzeige (data-auto): Sie zählen weder für Trefferzahl noch Suche/Prüfung.
     if (beidseitig) box.querySelectorAll('input[name=bivo]').forEach(c =>
-      c.addEventListener('change', () => lernzieleAbgleichen(box, [c])));
+      c.addEventListener('change', () => { direkt(c); lernzieleAbgleichen(box, [c]); }));
   }
 });
 
+const istAuto = c => c.dataset.auto !== undefined;
+
+function setzeAuto(c, an) {
+  // Ein Feld mit form="nicht-senden" gehört zu keinem Formular und wird weder gezählt noch abgeschickt
+  if (an) { c.dataset.auto = ''; c.setAttribute('form', 'nicht-senden'); }
+  else { delete c.dataset.auto; c.removeAttribute('form'); }
+}
+
+// Klick auf ein mitangekreuztes Feld macht es zur eigenen Wahl (bleibt angekreuzt)
+function direkt(c) {
+  if (istAuto(c) && !c.checked) c.checked = true;
+  setzeAuto(c, false);
+}
+
+function mitAnkreuzen(ziel, an, nochGetragen, auto) {
+  if (an) {
+    if (!ziel.checked) { ziel.checked = true; if (auto) setzeAuto(ziel, true); }
+  } else if (!nochGetragen && (!auto || istAuto(ziel))) {
+    ziel.checked = false;
+    setzeAuto(ziel, false);
+  }
+}
+
 function lernzieleAbgleichen(box, codesGeaendert) {
+  const lzCodes = lz => lz.dataset.bivo.split(' ').filter(Boolean);
+  const gewaehlt = new Set([...box.querySelectorAll('input[name=bivo]:checked')].map(c => c.value));
   codesGeaendert.forEach(code => box.querySelectorAll('input[name=lernziel][data-bivo]').forEach(lz => {
-    if (lz.dataset.bivo.split(' ').includes(code.value)) lz.checked = code.checked;
+    if (lzCodes(lz).includes(code.value))
+      mitAnkreuzen(lz, code.checked, lzCodes(lz).some(c => c !== code.value && gewaehlt.has(c) &&
+        !istAuto(box.querySelector(`input[name=bivo][value="${c}"]`))), true);
   }));
 }
 
-function bivoAbgleichen(box, geaendert) {
+function bivoAbgleichen(box, geaendert, auto) {
   const codes = c => c.dataset.bivo.split(' ').filter(Boolean);
-  const nochGewaehlt = new Set([...box.querySelectorAll('input[name=lernziel][data-bivo]:checked')].flatMap(codes));
+  const nochGewaehlt = new Set([...box.querySelectorAll('input[name=lernziel][data-bivo]:checked')]
+    .filter(c => !istAuto(c)).flatMap(codes));
   geaendert.forEach(lz => codes(lz).forEach(code => {
     const ziel = box.querySelector(`input[name=bivo][value="${code}"]`);
-    if (!ziel) return;
-    if (lz.checked) ziel.checked = true;
-    else if (!nochGewaehlt.has(code)) ziel.checked = false;
+    if (ziel) mitAnkreuzen(ziel, lz.checked, nochGewaehlt.has(code), auto);
   }));
 }
 

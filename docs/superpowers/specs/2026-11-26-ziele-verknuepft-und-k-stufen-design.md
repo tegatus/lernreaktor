@@ -17,6 +17,10 @@ erscheinen, wenn ein Admin ihn einschaltet.
 - Keine Kettenreaktion: das Ankreuzen eines Kompetenzziels kreuzt die *übrigen* Codes der mitgewählten Lernziele
   nicht an.
 - Aufgabenformular bleibt einseitig (Lernziel → Kompetenzziele), wie bisher.
+- **Mitangekreuzte Partner sind nur Anzeige** (nach Review entschieden, Variante A): Sie erscheinen blass, zählen
+  aber weder für Trefferzahl und Übungsblatt-Suche noch als Prüfungsziel – sonst würde ein einzelnes Lernziel über
+  seinen Code die Aufgaben anderer Lernziele mitziehen, und ein Code würde in der Prüfung jedes Lernziel darauf zum
+  eigenen Ziel machen. Ein Klick auf ein blasses Feld macht es zur eigenen Wahl.
 
 **2. Lernziele und Kompetenzziele zählen als eine Gruppe (ODER)**
 - Übungsblatt-Suche und Trefferzahl (`selection.filter_aufgaben`): Aufgaben, die eines der gewählten Lernziele
