@@ -40,6 +40,8 @@ def create_app(config=None):
     einrichten(app)
 
     app.jinja_env.globals["csrf_token"] = csrf_token
+    from .einstellungen import einstellung
+    app.jinja_env.globals["einstellung"] = einstellung
 
     from .aufgabentypen import TYPEN
     from .models import (ANTWORTFORMATE, BILDGROESSEN, NIVEAU_BESCHREIBUNG, NIVEAU_SCHWELLEN, NIVEAUS, REVIEW_STELLEN,

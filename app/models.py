@@ -498,6 +498,12 @@ class KiProtokoll(db.Model):
     cache_schreiben = db.Column(db.Integer, default=0)
 
 
+class Einstellung(db.Model):
+    """Einstellung der Installation (Schlüssel/Wert), siehe app/einstellungen.py."""
+    schluessel = db.Column(db.String(40), primary_key=True)
+    wert = db.Column(db.Text, nullable=False, default="")
+
+
 SPALTEN_NACHTRAG = [  # (Tabelle, Spalte, DDL) – für bestehende Datenbanken ohne Migrationswerkzeug
     ("aufgabe", "typ", "VARCHAR(12) NOT NULL DEFAULT 'frei'"),
     ("aufgabe", "daten", "TEXT NOT NULL DEFAULT '{}'"),

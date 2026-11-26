@@ -54,6 +54,7 @@
       ('lp_review.liste', 'Review-Hinweise', 'review', ['lp_review.']),
       ('lp.ki_status', 'KI-Assistent', 'ki', ['lp.ki']),
     ] %}
+    {% if current_user.ist_admin %}{% set eintraege = eintraege + [('lp.einstellungen', 'Einstellungen', 'schluessel', ['lp.einstellungen'])] %}{% endif %}
   {% elif current_user.ist_reviewer %}
     {% set eintraege = [('reviewer.dashboard', 'Aufgaben prüfen', 'aufgaben', ['reviewer.dashboard', 'reviewer.aufgabe']),
                         ('reviewer.kommentare', 'Meine Hinweise', 'lernziele', ['reviewer.kommentare']),

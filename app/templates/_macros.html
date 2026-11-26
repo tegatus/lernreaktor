@@ -29,7 +29,7 @@
     {% endfor %}
 {% endmacro %}
 
-{% macro auswahl(themen, bereiche, sel_themen=[], sel_lernziele=[], sel_bivo=[], sel_k=[], zeige_k=true, offen=false, verknuepfen=none) %}
+{% macro auswahl(themen, bereiche, sel_themen=[], sel_lernziele=[], sel_bivo=[], sel_k=[], zeige_k=none, offen=false, verknuepfen=none) %}
 {# verknuepfen: none | 'einseitig' (Lernziel → Kompetenzziele) | 'beidseitig' (auch Kompetenzziel → Lernziele) #}
 <div class="auswahl"{% if verknuepfen %} data-verknuepfen="{{ verknuepfen }}"{% endif %}>
   <div class="tabs" role="tablist">
@@ -67,7 +67,7 @@
     {{ bivo_liste(bereiche, sel_bivo) }}
   </div>
 
-  {% if zeige_k %}
+  {% if (zeige_k if zeige_k is not none else einstellung('k_stufen_filter')) %}
   <div class="k-filter">
     <span>K-Stufen (optional):</span>
     {% for k in range(1, 7) %}

@@ -650,6 +650,21 @@ def kompetenzen():
     return render_template("lp/kompetenzen.html", bereiche=Bereich.query.order_by(Bereich.code).all(), zaehler=zaehler)
 
 
+@bp.route("/einstellungen", methods=["GET", "POST"])
+@lp_required
+def einstellungen():
+    """Einstellungen der Installation – nur für Admins."""
+    from .einstellungen import einstellung, einstellung_setzen
+    if not current_user.ist_admin:
+        abort(403)
+    if request.method == "POST":
+        einstellung_setzen("k_stufen_filter", request.form.get("k_stufen_filter") == "1")
+        db.session.commit()
+        flash("Einstellungen gespeichert.", "ok")
+        return redirect(url_for(".einstellungen"))
+    return render_template("lp/einstellungen.html", k_stufen_filter=einstellung("k_stufen_filter"))
+
+
 # ---------------------------------------------------------------- Prüfungen
 
 @bp.route("/pruefungen")

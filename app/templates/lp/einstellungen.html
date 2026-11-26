@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf %}
+{% block title %}Einstellungen{% endblock %}
+{% block content %}
+<h1>Einstellungen</h1>
+<p class="muted">Gilt für die ganze Installation. Nur Admins sehen diese Seite.</p>
+<form method="post" class="card">{{ csrf() }}
+  <h3>Aufgabenauswahl</h3>
+  <label><input type="checkbox" name="k_stufen_filter" value="1" {{ 'checked' if k_stufen_filter }}>
+    K-Stufen-Filter in der Aufgabenauswahl anzeigen</label>
+  <p class="muted">Gilt für «Neues Übungsblatt» (Lernende) und «Prüfung generieren». Ausgeschaltet wird nicht nach
+    K-Stufe gefiltert; die K-Stufen von Aufgaben, Lernzielen und Kompetenzzielen bleiben erhalten und sichtbar.</p>
+  <div class="aktionen"><button class="btn">Speichern</button></div>
+</form>
+{% endblock %}

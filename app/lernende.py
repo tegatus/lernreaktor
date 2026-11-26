@@ -7,6 +7,7 @@ from flask_login import current_user, login_required
 from . import pdfgen, storage
 from .aufgabentypen import neuer_seed
 from .auth import lernende_required
+from .einstellungen import einstellung
 from .models import (Abgabe, AbgabeSeite, BlattAufgabe, Bereich, Thema, Uebungsblatt, db)
 from .selection import auswahl_beschreiben, filter_aufgaben, waehle_uebungsaufgaben
 
@@ -43,7 +44,7 @@ def auswahl_aus_request(src):
     themen = [int(x) for x in src.getlist("thema") if x.isdigit()]
     lernziele = [int(x) for x in src.getlist("lernziel") if x.isdigit()]
     codes = [x for x in src.getlist("bivo") if x]
-    k = [int(x) for x in src.getlist("k") if x.isdigit()]
+    k = [int(x) for x in src.getlist("k") if x.isdigit()] if einstellung("k_stufen_filter") else []
     return themen, codes, lernziele, k
 
 
