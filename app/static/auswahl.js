@@ -10,9 +10,28 @@ document.querySelectorAll('.auswahl').forEach(box => {
     const boxes = [...document.getElementById(b.dataset.scope).querySelectorAll('input[type=checkbox]')];
     const alleAn = boxes.every(c => c.checked);
     boxes.forEach(c => { c.checked = !alleAn; });
+    if (boxes.some(c => c.dataset.bivo !== undefined)) bivoAbgleichen(box, boxes);
     box.dispatchEvent(new Event('change', { bubbles: true }));
   }));
+
+  // Aufgabenformular: Lernziele (data-bivo) kreuzen ihre BiVo-Kompetenzziele mit an bzw. ab
+  const lzBoxen = [...box.querySelectorAll('input[name=lernziel][data-bivo]')];
+  if (lzBoxen.length) {
+    lzBoxen.forEach(c => c.addEventListener('change', () => bivoAbgleichen(box, [c])));
+    bivoAbgleichen(box, lzBoxen.filter(c => c.checked));  // Vorauswahl (z. B. «+ Aufgabe» beim Lernziel)
+  }
 });
+
+function bivoAbgleichen(box, geaendert) {
+  const codes = c => c.dataset.bivo.split(' ').filter(Boolean);
+  const nochGewaehlt = new Set([...box.querySelectorAll('input[name=lernziel][data-bivo]:checked')].flatMap(codes));
+  geaendert.forEach(lz => codes(lz).forEach(code => {
+    const ziel = box.querySelector(`input[name=bivo][value="${code}"]`);
+    if (!ziel) return;
+    if (lz.checked) ziel.checked = true;
+    else if (!nochGewaehlt.has(code)) ziel.checked = false;
+  }));
+}
 
 const ziel = document.querySelector('[data-trefferzahl]');
 if (ziel) {

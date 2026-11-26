@@ -18,7 +18,7 @@
     {% set u, p = zaehler[(lz.id, 'u')], zaehler[(lz.id, 'p')] %}
     <tr><td><span class="code">{{ lz.kuerzel }}</span></td><td>{{ lz.text }}</td>
         <td>{% for l in lz.leistungsziele %}<span class="code" title="{{ l.text }}">{{ l.code }}</span>{% else %}<span class="luecke">kein BiVo-Ziel</span>{% endfor %}</td>
-        <td>K{{ lz.k_stufe }}</td>
+        <td>{% if lz.k_stufe %}K{{ lz.k_stufe }}{% endif %}</td>
         <td class="{{ 'luecke' if not u }}">{{ u }}</td><td class="{{ 'luecke' if not p }}">{{ p }}</td>
         <td><a href="{{ url_for('lp.lernziel_bearbeiten', lz_id=lz.id) }}" class="btn klein sek">Bearbeiten</a>
             <a href="{{ url_for('lp.aufgabe_bearbeiten', lernziel=lz.id) }}" class="btn klein sek"

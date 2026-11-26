@@ -238,3 +238,21 @@ def test_import_meldet_abgelehnte(lp, app):
                                               "text": "1. Ich kann A. (x.9.9, K2) 2. Ich kann B. (a.1.1, K2)"},
                 follow_redirects=True)
     assert "ohne gültigen BiVo-Code nicht importiert" in r.get_data(as_text=True)
+
+
+# ---------------------------------------------------------------- Aufgabenformular
+
+def test_aufgabenformular_hat_bivo_daten(lp, app):
+    with app.app_context():
+        b16 = _lz("b16").id
+    html = lp.get("/lp/aufgaben/neu").get_data(as_text=True)
+    assert f'data-bivo="b.5.3 b.5.4" name="lernziel" value="{b16}"' in html
+    assert "data-bivo" not in lp.get("/lp/pruefungen/neu").get_data(as_text=True)
+
+
+def test_lernziele_liste_ohne_k_stufe(lp, app):
+    with app.app_context():
+        lz = _neues_lz(1, "a.1.1")
+        lz.k_stufe = None
+        db.session.commit()
+    assert "KNone" not in lp.get("/lp/lernziele").get_data(as_text=True)

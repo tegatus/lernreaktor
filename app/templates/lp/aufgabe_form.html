@@ -149,11 +149,12 @@
     </div>
 
     <h3>Zuordnung</h3>
-    <p class="muted">Gewählte Lernziele bringen ihre BiVo-Leistungsziele automatisch mit.</p>
+    <p class="muted">Gewählte Lernziele bringen ihre BiVo-Leistungsziele automatisch mit (werden beim Ankreuzen mit angekreuzt).</p>
     {{ auswahl(themen, bereiche,
                aufgabe.themen|map(attribute='id')|list if aufgabe else vorauswahl.themen,
                aufgabe.lernziele|map(attribute='id')|list if aufgabe else vorauswahl.lernziele,
-               aufgabe.leistungsziele|map(attribute='code')|list if aufgabe else [], zeige_k=false) }}
+               aufgabe.leistungsziele|map(attribute='code')|list if aufgabe else [], zeige_k=false,
+               bivo_mitnehmen=true) }}
     <label class="feld">Neues Thema anlegen (optional) <input name="neues_thema" placeholder="z. B. Gelelektrophorese"></label>
 
     <h3>Theorie zum Nachschlagen</h3>
